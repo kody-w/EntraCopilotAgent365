@@ -43,7 +43,7 @@ bash setup.sh
 
 - 🧠 **GPT-4 Powered** - Latest Azure OpenAI models
 - 💾 **Persistent Memory** - Remembers conversations across sessions
-- 🔐 **Enterprise Security** - Function-level authentication
+- 🔐 **Managed Identity** - Automatic authentication to Azure Storage (no credentials to manage)
 - ⚡ **Auto-scaling** - Serverless Azure Functions
 - 🎨 **Web Chat Interface** - Beautiful UI included
 - 🔧 **Zero Configuration** - All Azure settings automatically configured
@@ -354,9 +354,9 @@ class MyCustomAgent(BasicAgent):
 
 ### No Manual Configuration!
 The setup script automatically includes:
-- ✅ Your Azure Storage connection string
+- ✅ Your Azure Storage account name and file share
 - ✅ Your OpenAI API key and endpoint
-- ✅ Your Function App details
+- ✅ Managed Identity authentication (handled automatically by Azure)
 - ✅ All other required settings
 
 ## 📁 Project Structure
@@ -388,7 +388,7 @@ Copilot-Agent-365/
 | "C:\Program Files" error | Fixed! Script handles spaces in paths |
 | "func: command not found" | Run: `npm install -g azure-functions-core-tools@4` |
 | Port already in use | Edit `run.ps1` or `run.sh` and change to `func start --port 7072` |
-| "az login" needed | Run `az login` to deploy code to Azure (optional) |
+| "Unauthorized" API error | Verify you're using the correct function key in requests |
 
 ## 💡 Python Version Important!
 - **Use Python 3.11** (automatically installed by script)
@@ -415,13 +415,20 @@ Copilot-Agent-365/
 
 ## 🔐 Security
 
-- **API keys are embedded securely** in the generated setup script
+- **Managed Identity** - Azure Function automatically authenticates to Storage (no credentials to manage)
+- **Function Key Required** - Users only need the function key to access the API
+- **No connection strings** - Passwordless authentication to Azure Storage via Entra ID
 - **Never commit** `local.settings.json` to Git (contains secrets)
-- **Function requires authentication** key for API access
 - **All traffic uses HTTPS**
 - **Keys are unique** to your deployment
 
 ## 🆕 What's New
+
+### Version 2.2 - Managed Identity Authentication
+- 🔐 **Managed Identity** - Azure Function automatically authenticates to Storage (zero config)
+- 🚫 **No Connection Strings** - Passwordless authentication via Entra ID
+- 🛡️ **Enhanced Security** - Modern identity-based access control handled automatically
+- 🔑 **Simple Access** - Users only need function key to call the API
 
 ### Version 2.1 - Power Platform Integration
 - 🚀 **Microsoft 365 Integration** - Deploy to Teams and M365 Copilot
