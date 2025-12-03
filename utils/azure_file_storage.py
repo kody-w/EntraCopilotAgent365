@@ -1,9 +1,37 @@
+"""
+Azure File Storage Manager with Entra ID Authentication
+
+This module provides Azure File Storage access using Entra ID authentication:
+1. Managed Identity (recommended for Azure Function deployments)
+2. App Registration with Client Secret (for local development or specific scenarios)
+3. Azure CLI credentials (for local development)
+
+Environment Variables Required:
+- AZURE_STORAGE_ACCOUNT_NAME: Storage account name
+- AZURE_FILES_SHARE_NAME: File share name
+
+Optional Environment Variables (for App Registration auth):
+- AZURE_TENANT_ID: Entra ID tenant
+- AZURE_CLIENT_ID: App registration ID  
+- AZURE_CLIENT_SECRET: App secret
+
+If AZURE_TENANT_ID, AZURE_CLIENT_ID, and AZURE_CLIENT_SECRET are all set,
+the module uses App Registration authentication. Otherwise, it uses
+DefaultAzureCredential which supports Managed Identity (Azure) or Azure CLI (local).
+"""
+
 import json
 import os
 import logging
 import re
 from datetime import datetime, timedelta, timezone
-from azure.storage.file import FileService
+from typing import Optional, Union, Any, List
+
+from azure.identity import DefaultAzureCredential, ClientSecretCredential
+from azure.storage.fileshare import ShareServiceClient, ShareFileClient, ShareDirectoryClient
+from azure.storage.blob import BlobServiceClient, generate_blob_sas, BlobSasPermissions
+from azure.core.exceptions import ResourceNotFoundError, ResourceExistsError, AzureError
+
 
 def safe_json_loads(json_str):
     """
@@ -18,70 +46,127 @@ def safe_json_loads(json_str):
     except json.JSONDecodeError:
         return {"error": f"Invalid JSON: {json_str}"}
 
+
 class AzureFileStorageManager:
+    """
+    Azure File Storage Manager with Entra ID authentication.
+    
+    Supports Managed Identity for Azure deployments and App Registration
+    or Azure CLI for local development.
+    """
+    
     def __init__(self):
-        storage_connection = os.environ.get('AzureWebJobsStorage', '')
-        if not storage_connection:
-            raise ValueError("AzureWebJobsStorage connection string is required")
+        """
+        Initialize the storage manager with Entra ID authentication.
+        """
+        # Get required configuration
+        self.account_name = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
+        if not self.account_name:
+            raise ValueError("AZURE_STORAGE_ACCOUNT_NAME environment variable is required")
         
-        connection_parts = dict(part.split('=', 1) for part in storage_connection.split(';'))
-        
-        self.account_name = connection_parts.get('AccountName')
-        self.account_key = connection_parts.get('AccountKey')
-        
-        # IMPORTANT: No hardcoded default - always use environment variable
-        # This ensures each deployment uses its unique file share name
         self.share_name = os.environ.get('AZURE_FILES_SHARE_NAME')
         if not self.share_name:
             raise ValueError("AZURE_FILES_SHARE_NAME environment variable is required")
         
-        self.shared_memory_path = "shared_memories"  # Default shared memories path
+        # Memory context settings
+        self.shared_memory_path = "shared_memories"
         self.default_file_name = 'memory.json'
         self.current_guid = None
-        self.current_memory_path = self.shared_memory_path  # Initialize to shared memory path
+        self.current_memory_path = self.shared_memory_path
         
-        if not all([self.account_name, self.account_key]):
-            raise ValueError("Invalid storage connection string")
+        # Initialize Entra ID authentication
+        self._init_entra_auth()
         
-        self.file_service = FileService(
-            account_name=self.account_name,
-            account_key=self.account_key
-        )
+        # Ensure share and directories exist
         self._ensure_share_exists()
+    
+    def _init_entra_auth(self):
+        """Initialize Entra ID authentication."""
+        tenant_id = os.environ.get('AZURE_TENANT_ID')
+        client_id = os.environ.get('AZURE_CLIENT_ID')
+        client_secret = os.environ.get('AZURE_CLIENT_SECRET')
+        
+        if tenant_id and client_id and client_secret:
+            # Use App Registration credentials
+            logging.info("Using App Registration (Client Secret) credentials")
+            self.credential = ClientSecretCredential(
+                tenant_id=tenant_id,
+                client_id=client_id,
+                client_secret=client_secret
+            )
+        else:
+            # Use DefaultAzureCredential (Managed Identity for Azure, CLI for local)
+            logging.info("Using DefaultAzureCredential (Managed Identity or Azure CLI)")
+            self.credential = DefaultAzureCredential()
+        
+        # Initialize File Share client
+        account_url = f"https://{self.account_name}.file.core.windows.net"
+        self.share_service = ShareServiceClient(
+            account_url=account_url,
+            credential=self.credential
+        )
+        self.share_client = self.share_service.get_share_client(self.share_name)
+        
+        # Initialize Blob client (for URL generation with User Delegation SAS)
+        blob_url = f"https://{self.account_name}.blob.core.windows.net"
+        self.blob_service = BlobServiceClient(
+            account_url=blob_url,
+            credential=self.credential
+        )
+        
+        logging.info(f"Initialized Entra ID auth for storage account: {self.account_name}")
 
     def _ensure_share_exists(self):
+        """Ensure the file share and default directories exist."""
         try:
-            self.file_service.create_share(self.share_name, fail_on_exist=False)
-            
-            # Only ensure shared memories directory and file exist
-            self.ensure_directory_exists(self.shared_memory_path)
+            # Create share if it doesn't exist
             try:
-                self.file_service.get_file_properties(
-                    self.share_name,
-                    self.shared_memory_path,
-                    self.default_file_name
-                )
-            except Exception:
-                self.file_service.create_file_from_text(
-                    self.share_name,
-                    self.shared_memory_path,
-                    self.default_file_name,
-                    '{}'  # Empty JSON object
-                )
+                self.share_client.create_share()
+                logging.info(f"Created file share: {self.share_name}")
+            except ResourceExistsError:
+                logging.debug(f"File share already exists: {self.share_name}")
+            except AzureError as e:
+                if "ShareAlreadyExists" not in str(e):
+                    raise
+            
+            # Ensure shared memories directory exists
+            self.ensure_directory_exists(self.shared_memory_path)
+            
+            # Create default memory file if it doesn't exist
+            file_path = f"{self.shared_memory_path}/{self.default_file_name}"
+            try:
+                file_client = self.share_client.get_file_client(file_path)
+                file_client.get_file_properties()
+                logging.debug(f"Default memory file exists: {file_path}")
+            except ResourceNotFoundError:
+                file_client = self.share_client.get_file_client(file_path)
+                file_client.upload_file(b'{}')
                 logging.info(f"Created new {self.default_file_name} in shared memories directory")
+                
         except Exception as e:
             logging.error(f"Error ensuring share exists: {str(e)}")
             raise
 
-    def set_memory_context(self, guid=None):
-        """Set the memory context - only create new directories if valid GUID is provided"""
+    def set_memory_context(self, guid: Optional[str] = None) -> bool:
+        """
+        Set the memory context - only create new directories if valid GUID is provided.
+        
+        Args:
+            guid: Optional GUID for user-specific memory
+            
+        Returns:
+            bool: True if context was set successfully
+        """
         if not guid:
             self.current_guid = None
             self.current_memory_path = self.shared_memory_path
             return True
         
         # Validate GUID format
-        guid_pattern = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', re.IGNORECASE)
+        guid_pattern = re.compile(
+            r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+            re.IGNORECASE
+        )
         if not guid_pattern.match(guid):
             logging.warning(f"Invalid GUID format: {guid}. Using shared memory.")
             self.current_guid = None
@@ -89,30 +174,22 @@ class AzureFileStorageManager:
             return False
         
         try:
-            # Only proceed with GUID-specific setup if GUID is valid
             guid_dir = f"memory/{guid}"
             guid_file = "user_memory.json"
+            file_path = f"{guid_dir}/{guid_file}"
             
-            # Check if GUID directory already exists before creating
             try:
-                self.file_service.get_file_properties(
-                    self.share_name,
-                    guid_dir,
-                    guid_file
-                )
-                # If we get here, the file exists
+                file_client = self.share_client.get_file_client(file_path)
+                file_client.get_file_properties()
+                # File exists
                 self.current_guid = guid
                 self.current_memory_path = guid_dir
                 return True
-            except Exception:
+            except ResourceNotFoundError:
                 # Create new GUID directory and file
                 self.ensure_directory_exists(guid_dir)
-                self.file_service.create_file_from_text(
-                    self.share_name,
-                    guid_dir,
-                    guid_file,
-                    '{}'  # Empty JSON object
-                )
+                file_client = self.share_client.get_file_client(file_path)
+                file_client.upload_file(b'{}')
                 logging.info(f"Created new memory file for GUID: {guid}")
                 self.current_guid = guid
                 self.current_memory_path = guid_dir
@@ -124,8 +201,8 @@ class AzureFileStorageManager:
             self.current_memory_path = self.shared_memory_path
             return False
 
-    def read_json(self):
-        """Read from either GUID-specific memory or shared memories"""
+    def read_json(self) -> dict:
+        """Read from either GUID-specific memory or shared memories."""
         if self.current_guid and self.current_memory_path != self.shared_memory_path:
             try:
                 return self._read_guid_memory()
@@ -137,34 +214,36 @@ class AzureFileStorageManager:
         else:
             return self._read_shared_memory()
 
-    def _read_shared_memory(self):
+    def _read_shared_memory(self) -> dict:
+        """Read from shared memory location."""
         try:
-            file_content = self.file_service.get_file_to_text(
-                self.share_name,
-                self.shared_memory_path,
-                self.default_file_name
-            )
-            return safe_json_loads(file_content.content)
+            file_path = f"{self.shared_memory_path}/{self.default_file_name}"
+            file_client = self.share_client.get_file_client(file_path)
+            download = file_client.download_file()
+            content = download.readall().decode('utf-8')
+            return safe_json_loads(content)
+        except ResourceNotFoundError:
+            logging.warning("Shared memory file not found, recreating...")
+            self._ensure_share_exists()
+            return {}
         except Exception as e:
             logging.error(f"Error reading from shared memory: {str(e)}")
-            if "ResourceNotFound" in str(e):
-                self._ensure_share_exists()
             return {}
 
-    def _read_guid_memory(self):
+    def _read_guid_memory(self) -> dict:
+        """Read from GUID-specific memory location."""
         try:
-            file_content = self.file_service.get_file_to_text(
-                self.share_name,
-                self.current_memory_path,
-                "user_memory.json"
-            )
-            return safe_json_loads(file_content.content)
+            file_path = f"{self.current_memory_path}/user_memory.json"
+            file_client = self.share_client.get_file_client(file_path)
+            download = file_client.download_file()
+            content = download.readall().decode('utf-8')
+            return safe_json_loads(content)
         except Exception as e:
             logging.error(f"Error reading from GUID memory: {str(e)}")
             raise  # Let read_json handle the fallback
 
-    def write_json(self, data):
-        """Write to either GUID-specific memory or shared memories"""
+    def write_json(self, data: dict):
+        """Write to either GUID-specific memory or shared memories."""
         if self.current_guid and self.current_memory_path != self.shared_memory_path:
             try:
                 self._write_guid_memory(data)
@@ -176,70 +255,73 @@ class AzureFileStorageManager:
         else:
             self._write_shared_memory(data)
 
-    def _write_shared_memory(self, data):
+    def _write_shared_memory(self, data: dict):
+        """Write to shared memory location."""
         try:
             json_content = json.dumps(data, indent=4)
-            self.file_service.create_file_from_text(
-                self.share_name,
-                self.shared_memory_path,
-                self.default_file_name,
-                json_content
-            )
+            file_path = f"{self.shared_memory_path}/{self.default_file_name}"
+            file_client = self.share_client.get_file_client(file_path)
+            file_client.upload_file(json_content.encode('utf-8'))
+        except ResourceNotFoundError:
+            logging.warning("Shared memory path not found, recreating...")
+            self._ensure_share_exists()
+            self._write_shared_memory(data)
         except Exception as e:
             logging.error(f"Error writing to shared memory: {str(e)}")
-            if "ResourceNotFound" in str(e):
-                self._ensure_share_exists()
-                self._write_shared_memory(data)
+            raise
 
-    def _write_guid_memory(self, data):
+    def _write_guid_memory(self, data: dict):
+        """Write to GUID-specific memory location."""
         try:
             json_content = json.dumps(data, indent=4)
-            self.file_service.create_file_from_text(
-                self.share_name,
-                self.current_memory_path,
-                "user_memory.json",
-                json_content
-            )
+            file_path = f"{self.current_memory_path}/user_memory.json"
+            file_client = self.share_client.get_file_client(file_path)
+            file_client.upload_file(json_content.encode('utf-8'))
         except Exception as e:
             logging.error(f"Error writing to GUID memory: {str(e)}")
             raise  # Let write_json handle the fallback
 
-    def ensure_directory_exists(self, directory_name):
-        """Only creates directories that are explicitly needed"""
+    def ensure_directory_exists(self, directory_name: str) -> bool:
+        """
+        Creates directories that are explicitly needed.
+        
+        Args:
+            directory_name: Path of directory to create (can be nested like "a/b/c")
+            
+        Returns:
+            bool: True if successful
+        """
         try:
             if not directory_name:
                 return False
-                
-            self.file_service.create_share(self.share_name, fail_on_exist=False)
             
-            # Handle nested directories
             parts = directory_name.split('/')
             current_path = ""
             
             for part in parts:
                 if part:
-                    if current_path:
-                        current_path = f"{current_path}/{part}"
-                    else:
-                        current_path = part
-                        
-                    self.file_service.create_directory(
-                        self.share_name,
-                        current_path,
-                        fail_on_exist=False
-                    )
+                    current_path = f"{current_path}/{part}" if current_path else part
+                    try:
+                        dir_client = self.share_client.get_directory_client(current_path)
+                        dir_client.create_directory()
+                        logging.debug(f"Created directory: {current_path}")
+                    except ResourceExistsError:
+                        logging.debug(f"Directory already exists: {current_path}")
+                    except AzureError as e:
+                        if "ResourceAlreadyExists" not in str(e):
+                            raise
             return True
         except Exception as e:
             logging.error(f"Error ensuring directory exists: {str(e)}")
             return False
 
-    def write_file(self, directory_name, file_name, content):
+    def write_file(self, directory_name: str, file_name: str, content: Union[str, bytes, Any]) -> bool:
         """
         Writes a file to Azure File Storage, properly handling binary data.
         
         Args:
-            directory_name (str): The directory to write to
-            file_name (str): The name of the file
+            directory_name: The directory to write to
+            file_name: The name of the file
             content: The content to write (can be str, bytes, or BytesIO)
             
         Returns:
@@ -248,162 +330,262 @@ class AzureFileStorageManager:
         try:
             self.ensure_directory_exists(directory_name)
             
-            # Check if content is binary or string
+            file_path = f"{directory_name}/{file_name}"
+            file_client = self.share_client.get_file_client(file_path)
+            
+            # Convert content to bytes
             if isinstance(content, (bytes, bytearray)):
-                # It's already binary data - use create_file_from_bytes
-                self.file_service.create_file_from_bytes(
-                    self.share_name,
-                    directory_name,
-                    file_name,
-                    content
-                )
+                binary_content = content
             elif hasattr(content, 'read') and callable(content.read):
-                # It's a file-like object (like BytesIO), read it as binary
+                # File-like object (like BytesIO)
                 content.seek(0)
                 binary_content = content.read()
-                if isinstance(binary_content, (bytes, bytearray)):
-                    self.file_service.create_file_from_bytes(
-                        self.share_name,
-                        directory_name,
-                        file_name,
-                        binary_content
-                    )
-                else:
-                    # Not binary data, encode and use as text
-                    self.file_service.create_file_from_text(
-                        self.share_name,
-                        directory_name,
-                        file_name,
-                        str(binary_content)
-                    )
+                if not isinstance(binary_content, (bytes, bytearray)):
+                    binary_content = str(binary_content).encode('utf-8')
             else:
-                # It's probably a string, use create_file_from_text
-                self.file_service.create_file_from_text(
-                    self.share_name,
-                    directory_name,
-                    file_name,
-                    str(content)
-                )
+                # String or other - encode to bytes
+                binary_content = str(content).encode('utf-8')
             
+            file_client.upload_file(binary_content)
+            logging.debug(f"Wrote file: {file_path}")
             return True
+            
         except Exception as e:
             logging.error(f"Error writing file: {str(e)}")
             return False
 
-    def read_file(self, directory_name, file_name):
+    def read_file(self, directory_name: str, file_name: str) -> Optional[Union[str, bytes]]:
         """
         Reads a file from Azure File Storage.
         
         For text files, returns the content as a string.
-        For binary files, consider using read_file_binary instead.
+        For binary files, returns bytes.
         
         Args:
-            directory_name (str): The directory to read from
-            file_name (str): The name of the file
+            directory_name: The directory to read from
+            file_name: The name of the file
             
         Returns:
-            str or None: The file content or None if an error occurs
+            str, bytes, or None if an error occurs
         """
         try:
-            # For known binary file types, use get_file_to_bytes
-            if file_name.lower().endswith(('.pptx', '.docx', '.xlsx', '.pdf', '.zip', '.jpg', '.png', '.gif')):
+            # For known binary file types, return as bytes
+            binary_extensions = ('.pptx', '.docx', '.xlsx', '.pdf', '.zip', '.jpg', '.png', '.gif', '.jpeg', '.webp')
+            if file_name.lower().endswith(binary_extensions):
                 return self.read_file_binary(directory_name, file_name)
             
             # Otherwise try to get as text
+            file_path = f"{directory_name}/{file_name}"
+            file_client = self.share_client.get_file_client(file_path)
+            download = file_client.download_file()
+            content = download.readall()
+            
             try:
-                file_content = self.file_service.get_file_to_text(
-                    self.share_name,
-                    directory_name,
-                    file_name
-                )
-                return file_content.content
-            except Exception as text_error:
-                # If getting as text fails, try as binary
-                logging.warning(f"Failed to read as text, trying binary: {str(text_error)}")
-                return self.read_file_binary(directory_name, file_name)
+                return content.decode('utf-8')
+            except UnicodeDecodeError:
+                # Binary file, return as bytes
+                return content
                 
+        except ResourceNotFoundError:
+            logging.warning(f"File not found: {directory_name}/{file_name}")
+            return None
         except Exception as e:
             logging.error(f"Error reading file: {str(e)}")
             return None
             
-    def read_file_binary(self, directory_name, file_name):
+    def read_file_binary(self, directory_name: str, file_name: str) -> Optional[bytes]:
         """
         Reads a file from Azure File Storage as binary data.
         
         Args:
-            directory_name (str): The directory to read from
-            file_name (str): The name of the file
+            directory_name: The directory to read from
+            file_name: The name of the file
             
         Returns:
-            bytes or None: The binary file content or None if an error occurs
+            bytes or None if an error occurs
         """
         try:
-            binary_stream = self.file_service.get_file_to_bytes(
-                self.share_name,
-                directory_name,
-                file_name
-            )
-            
-            return binary_stream.content
+            file_path = f"{directory_name}/{file_name}"
+            file_client = self.share_client.get_file_client(file_path)
+            download = file_client.download_file()
+            return download.readall()
+        except ResourceNotFoundError:
+            logging.warning(f"Binary file not found: {directory_name}/{file_name}")
+            return None
         except Exception as e:
             logging.error(f"Error reading binary file: {str(e)}")
             return None
 
-    def list_files(self, directory_name):
+    def list_files(self, directory_name: str) -> List:
+        """
+        List files and directories in a directory.
+        
+        Args:
+            directory_name: The directory to list
+            
+        Returns:
+            List of file/directory objects with 'name' attribute
+        """
         try:
-            return self.file_service.list_directories_and_files(
-                self.share_name,
-                directory_name
-            )
+            dir_client = self.share_client.get_directory_client(directory_name)
+            items = list(dir_client.list_directories_and_files())
+            return items
+        except ResourceNotFoundError:
+            logging.warning(f"Directory not found: {directory_name}")
+            return []
         except Exception as e:
             logging.error(f"Error listing files: {str(e)}")
             return []
             
-    def generate_download_url(self, directory, filename, expiry_time):
+    def generate_download_url(self, directory: str, filename: str, expiry_minutes: int = 30) -> Optional[str]:
         """
-        Generates a temporary download URL with SAS token for a file in Azure File Storage.
+        Generates a temporary download URL using User Delegation SAS.
+        
+        This method uses Entra ID to get a user delegation key, then generates
+        a SAS token that can be shared with others for temporary access.
         
         Args:
-            directory (str): The directory containing the file
-            filename (str): The filename to download
-            expiry_time (datetime): When the URL should expire
+            directory: The directory containing the file
+            filename: The filename to download
+            expiry_minutes: How long the URL should be valid (default 30 minutes)
             
         Returns:
-            str: The download URL or None if failed
+            str: The download URL with SAS token, or None if failed
         """
         try:
-            # Get the full file path
+            # Build the file path
             if directory.endswith('/'):
                 file_path = f"{directory}{filename}"
             else:
                 file_path = f"{directory}/{filename}"
             
-            # Get directory and file path for the API
-            directory_path = '/'.join(file_path.split('/')[:-1])
-            file_name = file_path.split('/')[-1]
+            # For File Share, we need to generate a file-level SAS
+            file_client = self.share_client.get_file_client(file_path)
             
-            # Use current time as start time to ensure proper ordering
+            # Get file properties to ensure it exists
+            file_client.get_file_properties()
+            
+            # Generate SAS token using user delegation
             start_time = datetime.utcnow()
+            expiry_time = start_time + timedelta(minutes=expiry_minutes)
             
-            # Set expiry time to a safe value (30 minutes from now)
-            expiry_time = start_time + timedelta(minutes=30)
+            # For Azure Files with Entra ID, we use generate_file_sas from the share
+            from azure.storage.fileshare import generate_file_sas, FileSasPermissions
             
-            # Generate SAS token with minimal parameters
-            sas_token = self.file_service.generate_file_shared_access_signature(
+            # Get user delegation key from blob service (works for file share too)
+            delegation_key = self.blob_service.get_user_delegation_key(
+                key_start_time=start_time,
+                key_expiry_time=expiry_time + timedelta(hours=1)  # Key valid longer than SAS
+            )
+            
+            # Parse directory and file name
+            directory_path = '/'.join(file_path.split('/')[:-1])
+            file_name_only = file_path.split('/')[-1]
+            
+            sas_token = generate_file_sas(
+                account_name=self.account_name,
                 share_name=self.share_name,
                 directory_name=directory_path,
-                file_name=file_name,
-                permission='r',  # Read permission only
-                expiry=expiry_time
+                file_name=file_name_only,
+                user_delegation_key=delegation_key,
+                permission=FileSasPermissions(read=True),
+                expiry=expiry_time,
+                start=start_time
             )
             
             # Create the full URL with SAS token
             file_url = f"https://{self.account_name}.file.core.windows.net/{self.share_name}/{file_path}"
             download_url = f"{file_url}?{sas_token}"
             
+            logging.info(f"Generated download URL for: {file_path}")
             return download_url
             
         except Exception as e:
             logging.error(f"Error generating download URL: {str(e)}")
             logging.error(f"Directory: {directory}, Filename: {filename}")
+            
+            # Fallback: return direct URL (requires authentication)
+            try:
+                if directory.endswith('/'):
+                    file_path = f"{directory}{filename}"
+                else:
+                    file_path = f"{directory}/{filename}"
+                direct_url = f"https://{self.account_name}.file.core.windows.net/{self.share_name}/{file_path}"
+                logging.warning(f"Returning direct URL (requires auth): {direct_url}")
+                return direct_url
+            except:
+                return None
+
+    def delete_file(self, directory_name: str, file_name: str) -> bool:
+        """
+        Delete a file from Azure File Storage.
+        
+        Args:
+            directory_name: The directory containing the file
+            file_name: The name of the file to delete
+            
+        Returns:
+            bool: True if deleted successfully, False otherwise
+        """
+        try:
+            file_path = f"{directory_name}/{file_name}"
+            file_client = self.share_client.get_file_client(file_path)
+            file_client.delete_file()
+            logging.info(f"Deleted file: {file_path}")
+            return True
+        except ResourceNotFoundError:
+            logging.warning(f"File not found for deletion: {directory_name}/{file_name}")
+            return False
+        except Exception as e:
+            logging.error(f"Error deleting file: {str(e)}")
+            return False
+
+    def file_exists(self, directory_name: str, file_name: str) -> bool:
+        """
+        Check if a file exists in Azure File Storage.
+        
+        Args:
+            directory_name: The directory to check
+            file_name: The name of the file
+            
+        Returns:
+            bool: True if file exists, False otherwise
+        """
+        try:
+            file_path = f"{directory_name}/{file_name}"
+            file_client = self.share_client.get_file_client(file_path)
+            file_client.get_file_properties()
+            return True
+        except ResourceNotFoundError:
+            return False
+        except Exception as e:
+            logging.error(f"Error checking file existence: {str(e)}")
+            return False
+
+    def get_file_properties(self, directory_name: str, file_name: str) -> Optional[dict]:
+        """
+        Get properties of a file in Azure File Storage.
+        
+        Args:
+            directory_name: The directory containing the file
+            file_name: The name of the file
+            
+        Returns:
+            dict with file properties or None if not found
+        """
+        try:
+            file_path = f"{directory_name}/{file_name}"
+            file_client = self.share_client.get_file_client(file_path)
+            props = file_client.get_file_properties()
+            return {
+                'name': file_name,
+                'size': props.size,
+                'content_type': props.content_settings.content_type if props.content_settings else None,
+                'last_modified': props.last_modified,
+                'etag': props.etag
+            }
+        except ResourceNotFoundError:
+            return None
+        except Exception as e:
+            logging.error(f"Error getting file properties: {str(e)}")
             return None

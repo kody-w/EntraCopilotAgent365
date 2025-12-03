@@ -1,7 +1,12 @@
-# Core Azure Functions and Storage dependencies
+# Core Azure Functions dependencies
 azure-functions==1.18.0
-azure-storage-blob==12.16.0
-azure-storage-file==2.1.0
+
+# Azure Identity for Entra ID authentication (Managed Identity, App Registration, Azure CLI)
+azure-identity>=1.15.0
+
+# Azure Storage with Entra ID support
+azure-storage-blob>=12.19.0
+azure-storage-file-share>=12.15.0
 azure-core>=1.28.0,<2.0.0
 
 # OpenAI - FIXED VERSION to resolve proxies error
@@ -37,7 +42,6 @@ python-pptx>=0.6.21
 # Browser Automation and AI Agents dependencies
 azure-ai-projects>=1.0.0b4
 azure-ai-agents>=1.0.0b1
-azure-identity>=1.15.0
 
 # Code Review Agent with full AgentTeam functionality
 pyyaml>=6.0.0
