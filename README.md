@@ -5,7 +5,9 @@
 
 ### Step 1: Deploy to Azure (1 minute)
 
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://kody-w.github.io/EntraCopilotAgent365/deploy.html)
+**Right-click → "Open link in new tab"** to keep this page open:
+
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fkody-w%2FEntraCopilotAgent365%2Fmain%2Fazuredeploy.json)
 
 ### Step 2: Copy & Run Setup Script (2 minutes)
 
