@@ -280,10 +280,6 @@
               "value": "EnableWorkerIndexing"
             },
             {
-              "name": "FUNCTIONS_WORKER_RUNTIME",
-              "value": "[parameters('functionAppRuntime')]"
-            },
-            {
               "name": "AZURE_OPENAI_API_KEY",
               "value": "[listKeys(variables('openAIResourceId'), '2023-05-01').key1]"
             },
