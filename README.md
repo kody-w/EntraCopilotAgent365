@@ -5,7 +5,7 @@
 
 ### Step 1: Deploy to Azure (1 minute)
 
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://kody-w.github.io/Copilot-Agent-365/deploy.html)
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://kody-w.github.io/EntraCopilotAgent365/deploy.html)
 
 ### Step 2: Copy & Run Setup Script (2 minutes)
 
