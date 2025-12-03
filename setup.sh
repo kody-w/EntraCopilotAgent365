@@ -228,7 +228,7 @@ else
     # Need to clone - create temp dir, clone, copy files
     echo -e "${YELLOW}Cloning repository...${NC}"
     TEMP_DIR=$(mktemp -d)
-    git clone https://github.com/kody-w/Copilot-Agent-365.git "$TEMP_DIR"
+    git clone https://github.com/kody-w/EntraCopilotAgent365.git "$TEMP_DIR"
 
     # Copy all files from cloned repo to current directory
     echo -e "${YELLOW}Copying project files...${NC}"

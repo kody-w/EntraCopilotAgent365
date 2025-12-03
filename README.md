@@ -1,12 +1,11 @@
 # Copilot Agent 365 - Enterprise AI Assistant
-<a href='https://codespaces.new/kody-w/Copilot-Agent-365?quickstart=1'><img src='https://github.com/codespaces/badge.svg' alt='Open in GitHub Codespaces' style='max-width: 100%;'></a>
+<a href='https://codespaces.new/kody-w/EntraCopilotAgent365?quickstart=1'><img src='https://github.com/codespaces/badge.svg' alt='Open in GitHub Codespaces' style='max-width: 100%;'></a>
 
 ## 🚀 One-Click Setup - Fully Automated!
 
 ### Step 1: Deploy to Azure (1 minute)
-<a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fkody-w%2FCopilot-Agent-365%2Fmain%2Fazuredeploy.json" target="_blank">
-  <img src="https://aka.ms/deploytoazurebutton" alt="Deploy to Azure"/>
-</a>
+
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://kody-w.github.io/Copilot-Agent-365/deploy.html)
 
 ### Step 2: Copy & Run Setup Script (2 minutes)
 
@@ -159,7 +158,7 @@ Deploy your AI assistant where your users already work:
 
 #### Step 1: Download Power Platform Solution
 
-1. Go to [Copilot-Agent-365 Releases](https://github.com/kody-w/Copilot-Agent-365/releases)
+1. Go to [Copilot-Agent-365 Releases](https://github.com/kody-w/EntraCopilotAgent365/releases)
 2. Download `Copilot365_PowerPlatform_Solution.zip`
 3. Open [Power Apps](https://make.powerapps.com)
 4. Navigate to **Solutions** → **Import Solution**
@@ -298,7 +297,7 @@ When integrating with Power Platform:
 
 - 📚 [Power Platform Documentation](https://learn.microsoft.com/power-platform/)
 - 🤖 [Copilot Studio Docs](https://learn.microsoft.com/microsoft-copilot-studio/)
-- 💬 [Community Forums](https://github.com/kody-w/Copilot-Agent-365/discussions)
+- 💬 [Community Forums](https://github.com/kody-w/EntraCopilotAgent365/discussions)
 
 ---
 
@@ -597,7 +596,7 @@ Copilot-Agent-365/
 
 ### Request a Feature
 
-Have an idea? [Submit a feature request](https://github.com/kody-w/Copilot-Agent-365/issues/new?labels=enhancement) or join our [discussions](https://github.com/kody-w/Copilot-Agent-365/discussions) to shape the future of Copilot Agent 365!
+Have an idea? [Submit a feature request](https://github.com/kody-w/EntraCopilotAgent365/issues/new?labels=enhancement) or join our [discussions](https://github.com/kody-w/EntraCopilotAgent365/discussions) to shape the future of Copilot Agent 365!
 
 ## 🤝 Contributing
 
@@ -613,8 +612,8 @@ MIT License - See [LICENSE](LICENSE)
 
 ## 🆘 Support
 
-- **Issues**: [GitHub Issues](https://github.com/kody-w/Copilot-Agent-365/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/kody-w/Copilot-Agent-365/discussions)
+- **Issues**: [GitHub Issues](https://github.com/kody-w/EntraCopilotAgent365/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/kody-w/EntraCopilotAgent365/discussions)
 
 ## 🌟 Why This Project?
 
@@ -629,7 +628,7 @@ This project makes enterprise AI accessible to everyone by:
 <p align="center">
   <strong>Deploy your own AI assistant in under 3 minutes!</strong>
   <br><br>
-  <a href="https://github.com/kody-w/Copilot-Agent-365">⭐ Star this repo</a> if it helped you!
+  <a href="https://github.com/kody-w/EntraCopilotAgent365">⭐ Star this repo</a> if it helped you!
   <br><br>
   Made with ❤️ for the community
 </p>
