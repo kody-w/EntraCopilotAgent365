@@ -151,10 +151,15 @@ class AzureFileStorageManager:
             except AzureError as e:
                 if "ShareAlreadyExists" not in str(e):
                     raise
-            
+
             # Ensure shared memories directory exists
             self.ensure_directory_exists(self.shared_memory_path)
-            
+
+            # Ensure all required directories exist (agents, multi_agents, demos, agent_config)
+            required_directories = ['agents', 'multi_agents', 'demos', 'agent_config']
+            for directory in required_directories:
+                self.ensure_directory_exists(directory)
+
             # Create default memory file if it doesn't exist
             file_path = f"{self.shared_memory_path}/{self.default_file_name}"
             try:
@@ -165,7 +170,7 @@ class AzureFileStorageManager:
                 file_client = self.share_client.get_file_client(file_path)
                 file_client.upload_file(b'{}')
                 logging.info(f"Created new {self.default_file_name} in shared memories directory")
-                
+
         except Exception as e:
             logging.error(f"Error ensuring share exists: {str(e)}")
             raise
@@ -439,13 +444,14 @@ class AzureFileStorageManager:
             logging.error(f"Error reading binary file: {str(e)}")
             return None
 
-    def list_files(self, directory_name: str) -> List:
+    def list_files(self, directory_name: str, auto_create: bool = True) -> List:
         """
         List files and directories in a directory.
-        
+
         Args:
             directory_name: The directory to list
-            
+            auto_create: If True, auto-create the directory if it doesn't exist (default: True)
+
         Returns:
             List of file/directory objects with 'name' attribute
         """
@@ -454,6 +460,11 @@ class AzureFileStorageManager:
             items = list(dir_client.list_directories_and_files())
             return items
         except ResourceNotFoundError:
+            if auto_create:
+                logging.info(f"Directory not found, creating: {directory_name}")
+                if self.ensure_directory_exists(directory_name):
+                    logging.info(f"Created directory: {directory_name}")
+                    return []  # Directory now exists but is empty
             logging.warning(f"Directory not found: {directory_name}")
             return []
         except Exception as e:
