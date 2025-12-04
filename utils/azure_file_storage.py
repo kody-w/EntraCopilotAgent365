@@ -1,23 +1,19 @@
 """
-Azure File Storage Manager with Entra ID Authentication
+Azure File Storage Manager with Multiple Authentication Methods
 
-This module provides Azure File Storage access using Entra ID authentication:
-1. Managed Identity (recommended for Azure Function deployments)
-2. App Registration with Client Secret (for local development or specific scenarios)
-3. Azure CLI credentials (for local development)
+This module provides Azure File Storage access using multiple authentication options:
+1. Connection String (recommended for local development)
+2. Managed Identity (recommended for Azure Function deployments)
+3. App Registration with Client Secret (for specific scenarios)
 
 Environment Variables Required:
 - AZURE_STORAGE_ACCOUNT_NAME: Storage account name
 - AZURE_FILES_SHARE_NAME: File share name
 
-Optional Environment Variables (for App Registration auth):
-- AZURE_TENANT_ID: Entra ID tenant
-- AZURE_CLIENT_ID: App registration ID  
-- AZURE_CLIENT_SECRET: App secret
-
-If AZURE_TENANT_ID, AZURE_CLIENT_ID, and AZURE_CLIENT_SECRET are all set,
-the module uses App Registration authentication. Otherwise, it uses
-DefaultAzureCredential which supports Managed Identity (Azure) or Azure CLI (local).
+Authentication Priority (first available wins):
+1. AzureWebJobsStorage connection string (if contains AccountKey)
+2. App Registration (if AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET set)
+3. Managed Identity / DefaultAzureCredential (for Azure deployments)
 """
 
 import json
@@ -74,18 +70,34 @@ class AzureFileStorageManager:
         self.current_guid = None
         self.current_memory_path = self.shared_memory_path
         
-        # Initialize Entra ID authentication
-        self._init_entra_auth()
+        # Initialize authentication
+        self._init_auth()
         
         # Ensure share and directories exist
         self._ensure_share_exists()
     
-    def _init_entra_auth(self):
-        """Initialize Entra ID authentication."""
+    def _init_auth(self):
+        """Initialize authentication - connection string preferred for local dev."""
+        # Try connection string first (best for local development)
+        connection_string = os.environ.get('AzureWebJobsStorage', '')
+
+        if connection_string and 'AccountKey=' in connection_string and 'UseDevelopmentStorage' not in connection_string:
+            # Use connection string authentication
+            logging.info("Using connection string authentication")
+            self.credential = None  # Not needed with connection string
+            self.share_service = ShareServiceClient.from_connection_string(connection_string)
+            self.share_client = self.share_service.get_share_client(self.share_name)
+
+            # Initialize Blob client from connection string too
+            self.blob_service = BlobServiceClient.from_connection_string(connection_string)
+            logging.info(f"Initialized connection string auth for storage account: {self.account_name}")
+            return
+
+        # Try App Registration credentials
         tenant_id = os.environ.get('AZURE_TENANT_ID')
         client_id = os.environ.get('AZURE_CLIENT_ID')
         client_secret = os.environ.get('AZURE_CLIENT_SECRET')
-        
+
         if tenant_id and client_id and client_secret:
             # Use App Registration credentials
             logging.info("Using App Registration (Client Secret) credentials")
@@ -95,26 +107,28 @@ class AzureFileStorageManager:
                 client_secret=client_secret
             )
         else:
-            # Use DefaultAzureCredential (Managed Identity for Azure, CLI for local)
-            logging.info("Using DefaultAzureCredential (Managed Identity or Azure CLI)")
+            # Use DefaultAzureCredential (Managed Identity for Azure)
+            # Note: For Azure Files, Managed Identity has limited support
+            logging.info("Using DefaultAzureCredential (Managed Identity)")
             self.credential = DefaultAzureCredential()
-        
-        # Initialize File Share client
+
+        # Initialize File Share client with credential
         account_url = f"https://{self.account_name}.file.core.windows.net"
         self.share_service = ShareServiceClient(
             account_url=account_url,
-            credential=self.credential
+            credential=self.credential,
+            token_intent="backup"  # Required for token auth with Azure Files
         )
         self.share_client = self.share_service.get_share_client(self.share_name)
-        
+
         # Initialize Blob client (for URL generation with User Delegation SAS)
         blob_url = f"https://{self.account_name}.blob.core.windows.net"
         self.blob_service = BlobServiceClient(
             account_url=blob_url,
             credential=self.credential
         )
-        
-        logging.info(f"Initialized Entra ID auth for storage account: {self.account_name}")
+
+        logging.info(f"Initialized token auth for storage account: {self.account_name}")
 
     def _ensure_share_exists(self):
         """Ensure the file share and default directories exist."""
