@@ -101,12 +101,10 @@
       "type": "string",
       "defaultValue": "3.11",
       "allowedValues": [
-        "3.9",
-        "3.10",
         "3.11"
       ],
       "metadata": {
-        "description": "Python version to use"
+        "description": "Python version to use (3.11 required for Azure Functions v4 compatibility)"
       }
     },
     "functionAppRuntime": {
