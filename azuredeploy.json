@@ -212,12 +212,12 @@
     },
     {
       "type": "Microsoft.Web/serverfarms",
-      "apiVersion": "2023-12-01",
+      "apiVersion": "2022-09-01",
       "name": "[variables('appServicePlanName')]",
       "location": "[resourceGroup().location]",
       "sku": {
-        "tier": "FlexConsumption",
-        "name": "FC1"
+        "name": "Y1",
+        "tier": "Dynamic"
       },
       "kind": "functionapp",
       "properties": {
@@ -226,7 +226,7 @@
     },
     {
       "type": "Microsoft.Web/sites",
-      "apiVersion": "2023-12-01",
+      "apiVersion": "2022-09-01",
       "name": "[parameters('functionAppName')]",
       "location": "[resourceGroup().location]",
       "kind": "functionapp,linux",
@@ -236,7 +236,7 @@
       "dependsOn": [
         "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
         "[variables('storageAccountId')]",
-        "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', parameters('storageAccountName'), 'default', parameters('storageBlobContainerName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts/fileServices/shares', parameters('storageAccountName'), 'default', variables('fileShareName'))]",
         "[variables('openAIResourceId')]",
         "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
       ],
@@ -246,26 +246,8 @@
       "properties": {
         "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
         "httpsOnly": true,
-        "functionAppConfig": {
-          "deployment": {
-            "storage": {
-              "type": "blobContainer",
-              "value": "[concat('https://', parameters('storageAccountName'), '.blob.core.windows.net/', parameters('storageBlobContainerName'))]",
-              "authentication": {
-                "type": "SystemAssignedIdentity"
-              }
-            }
-          },
-          "scaleAndConcurrency": {
-            "maximumInstanceCount": 100,
-            "instanceMemoryMB": 2048
-          },
-          "runtime": {
-            "name": "[parameters('functionAppRuntime')]",
-            "version": "[parameters('pythonVersion')]"
-          }
-        },
         "siteConfig": {
+          "linuxFxVersion": "[concat('PYTHON|', parameters('pythonVersion'))]",
           "appSettings": [
             {
               "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
@@ -276,8 +258,24 @@
               "value": "EnableWorkerIndexing"
             },
             {
-              "name": "AzureWebJobsStorage__accountName",
-              "value": "[parameters('storageAccountName')]"
+              "name": "AzureWebJobsStorage",
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', parameters('storageAccountName'), ';EndpointSuffix=', environment().suffixes.storage, ';AccountKey=', listKeys(variables('storageAccountId'), '2022-05-01').keys[0].value)]"
+            },
+            {
+              "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', parameters('storageAccountName'), ';EndpointSuffix=', environment().suffixes.storage, ';AccountKey=', listKeys(variables('storageAccountId'), '2022-05-01').keys[0].value)]"
+            },
+            {
+              "name": "WEBSITE_CONTENTSHARE",
+              "value": "[variables('fileShareName')]"
+            },
+            {
+              "name": "FUNCTIONS_EXTENSION_VERSION",
+              "value": "~4"
+            },
+            {
+              "name": "FUNCTIONS_WORKER_RUNTIME",
+              "value": "python"
             },
             {
               "name": "AZURE_OPENAI_API_KEY",
@@ -381,7 +379,11 @@
     },
     "managedIdentityPrincipalId": {
       "type": "string",
-      "value": "[reference(variables('functionAppId'), '2023-12-01', 'Full').identity.principalId]"
+      "value": "[reference(variables('functionAppId'), '2022-09-01', 'Full').identity.principalId]"
+    },
+    "functionKey": {
+      "type": "string",
+      "value": "[listKeys(concat(variables('functionAppId'), '/host/default'), '2022-09-01').functionKeys.default]"
     },
     "localSettingsJson": {
       "type": "string",
@@ -390,6 +392,14 @@
     "getFunctionKeyInstructions": {
       "type": "string",
       "value": "[concat('To get your Function Key:\n1. Go to Azure Portal\n2. Navigate to Function App: ', parameters('functionAppName'), '\n3. Click \"App keys\" in left menu\n4. Copy the \"default\" key under \"Host keys\"\n\nOr use Azure CLI:\naz functionapp keys list --name ', parameters('functionAppName'), ' --resource-group ', resourceGroup().name, ' --query \"functionKeys.default\" -o tsv')]"
+    },
+    "windowsSetupScript": {
+      "type": "string",
+      "value": "[concat('# Copilot Agent 365 - Windows Setup Script\n# Generated from ARM deployment\n# Run this script in PowerShell to configure your local environment\n\n$ErrorActionPreference = \"Stop\"\n\nWrite-Host \"========================================\" -ForegroundColor Cyan\nWrite-Host \"Copilot Agent 365 - Local Setup\" -ForegroundColor Cyan\nWrite-Host \"========================================\" -ForegroundColor Cyan\n\n# Configuration from deployment\n$FUNCTION_APP_NAME = \"', parameters('functionAppName'), '\"\n$RESOURCE_GROUP = \"', resourceGroup().name, '\"\n$OPENAI_ENDPOINT = \"', reference(variables('openAIResourceId')).endpoint, '\"\n$OPENAI_KEY = \"', listKeys(variables('openAIResourceId'), '2023-05-01').key1, '\"\n$OPENAI_DEPLOYMENT = \"', parameters('openAIDeploymentName'), '\"\n$STORAGE_ACCOUNT = \"', parameters('storageAccountName'), '\"\n$FILE_SHARE = \"', variables('fileShareName'), '\"\n$ASSISTANT_NAME = \"', parameters('assistantName'), '\"\n$CHARACTERISTIC_DESC = \"', parameters('characteristicDescription'), '\"\n$FUNCTION_URL = \"https://', reference(variables('functionAppId')).defaultHostName, '/api/businessinsightbot_function\"\n$FUNCTION_KEY = \"', listKeys(concat(variables('functionAppId'), '/host/default'), '2022-09-01').functionKeys.default, '\"\n\nWrite-Host \"\"\nWrite-Host \"Creating local.settings.json...\" -ForegroundColor Yellow\n\n$localSettings = @{\n    IsEncrypted = $false\n    Values = @{\n        FUNCTIONS_WORKER_RUNTIME = \"python\"\n        AzureWebJobsStorage = \"UseDevelopmentStorage=true\"\n        AZURE_OPENAI_API_KEY = $OPENAI_KEY\n        AZURE_OPENAI_ENDPOINT = $OPENAI_ENDPOINT\n        AZURE_OPENAI_API_VERSION = \"2024-02-01\"\n        AZURE_OPENAI_DEPLOYMENT_NAME = $OPENAI_DEPLOYMENT\n        AZURE_STORAGE_ACCOUNT_NAME = $STORAGE_ACCOUNT\n        AZURE_FILES_SHARE_NAME = $FILE_SHARE\n        ASSISTANT_NAME = $ASSISTANT_NAME\n        CHARACTERISTIC_DESCRIPTION = $CHARACTERISTIC_DESC\n    }\n}\n\n$localSettings | ConvertTo-Json -Depth 10 | Set-Content -Path \"local.settings.json\" -Encoding UTF8\nWrite-Host \"local.settings.json created successfully!\" -ForegroundColor Green\n\nWrite-Host \"\"\nWrite-Host \"========================================\" -ForegroundColor Cyan\nWrite-Host \"Setup Complete!\" -ForegroundColor Cyan\nWrite-Host \"========================================\" -ForegroundColor Cyan\nWrite-Host \"\"\nWrite-Host \"Function App Name: $FUNCTION_APP_NAME\" -ForegroundColor White\nWrite-Host \"Resource Group: $RESOURCE_GROUP\" -ForegroundColor White\nWrite-Host \"Function URL: $FUNCTION_URL\" -ForegroundColor White\nWrite-Host \"Function Key: $FUNCTION_KEY\" -ForegroundColor White\nWrite-Host \"\"\nWrite-Host \"Full URL with key:\" -ForegroundColor Yellow\nWrite-Host \"$FUNCTION_URL?code=$FUNCTION_KEY\" -ForegroundColor Cyan\nWrite-Host \"\"\nWrite-Host \"To run locally: .\\\\run.ps1\" -ForegroundColor Yellow\nWrite-Host \"To deploy code: func azure functionapp publish $FUNCTION_APP_NAME\" -ForegroundColor Yellow\n')]"
+    },
+    "macLinuxSetupScript": {
+      "type": "string",
+      "value": "[concat('#!/bin/bash\n# Copilot Agent 365 - Mac/Linux Setup Script\n# Generated from ARM deployment\n# Run: chmod +x setup.sh && ./setup.sh\n\nset -e\n\necho \"========================================\"\necho \"Copilot Agent 365 - Local Setup\"\necho \"========================================\"\n\n# Configuration from deployment\nFUNCTION_APP_NAME=\"', parameters('functionAppName'), '\"\nRESOURCE_GROUP=\"', resourceGroup().name, '\"\nOPENAI_ENDPOINT=\"', reference(variables('openAIResourceId')).endpoint, '\"\nOPENAI_KEY=\"', listKeys(variables('openAIResourceId'), '2023-05-01').key1, '\"\nOPENAI_DEPLOYMENT=\"', parameters('openAIDeploymentName'), '\"\nSTORAGE_ACCOUNT=\"', parameters('storageAccountName'), '\"\nFILE_SHARE=\"', variables('fileShareName'), '\"\nASSISTANT_NAME=\"', parameters('assistantName'), '\"\nCHARACTERISTIC_DESC=\"', parameters('characteristicDescription'), '\"\nFUNCTION_URL=\"https://', reference(variables('functionAppId')).defaultHostName, '/api/businessinsightbot_function\"\nFUNCTION_KEY=\"', listKeys(concat(variables('functionAppId'), '/host/default'), '2022-09-01').functionKeys.default, '\"\n\necho \"\"\necho \"Creating local.settings.json...\"\n\ncat > local.settings.json << EOF\n{\n  \"IsEncrypted\": false,\n  \"Values\": {\n    \"FUNCTIONS_WORKER_RUNTIME\": \"python\",\n    \"AzureWebJobsStorage\": \"UseDevelopmentStorage=true\",\n    \"AZURE_OPENAI_API_KEY\": \"$OPENAI_KEY\",\n    \"AZURE_OPENAI_ENDPOINT\": \"$OPENAI_ENDPOINT\",\n    \"AZURE_OPENAI_API_VERSION\": \"2024-02-01\",\n    \"AZURE_OPENAI_DEPLOYMENT_NAME\": \"$OPENAI_DEPLOYMENT\",\n    \"AZURE_STORAGE_ACCOUNT_NAME\": \"$STORAGE_ACCOUNT\",\n    \"AZURE_FILES_SHARE_NAME\": \"$FILE_SHARE\",\n    \"ASSISTANT_NAME\": \"$ASSISTANT_NAME\",\n    \"CHARACTERISTIC_DESCRIPTION\": \"$CHARACTERISTIC_DESC\"\n  }\n}\nEOF\n\necho \"local.settings.json created successfully!\"\n\necho \"\"\necho \"========================================\"\necho \"Setup Complete!\"\necho \"========================================\"\necho \"\"\necho \"Function App Name: $FUNCTION_APP_NAME\"\necho \"Resource Group: $RESOURCE_GROUP\"\necho \"Function URL: $FUNCTION_URL\"\necho \"Function Key: $FUNCTION_KEY\"\necho \"\"\necho \"Full URL with key:\"\necho \"$FUNCTION_URL?code=$FUNCTION_KEY\"\necho \"\"\necho \"To run locally: ./run.sh\"\necho \"To deploy code: func azure functionapp publish $FUNCTION_APP_NAME\"\n')]"
     }
   }
 }
