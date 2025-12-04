@@ -5,7 +5,7 @@ import sys
 import importlib.util
 import requests
 from agents.basic_agent import BasicAgent
-from utils.azure_file_storage import AzureFileStorageManager
+from utils.storage_factory import get_storage_manager
 
 # Optional: Try to import AgentManager if it exists (for local agent lookup)
 try:
@@ -63,7 +63,7 @@ class ScriptedDemoAgent(BasicAgent):
                 "required": ["action"]
             }
         }
-        self.storage_manager = AzureFileStorageManager()
+        self.storage_manager = get_storage_manager()
         self.demo_directory = "demos"
         self.loaded_demo_cache = {}  # Cache loaded demos
 

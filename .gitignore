@@ -15,6 +15,9 @@ local.settings.json
 .func/
 func-cli/
 
+# Local storage fallback
+.local_storage/
+
 # IDE
 
 .idea/

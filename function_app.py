@@ -12,7 +12,8 @@ import uuid
 from openai import AzureOpenAI
 from datetime import datetime
 import time
-from utils.azure_file_storage import AzureFileStorageManager, safe_json_loads
+from utils.azure_file_storage import safe_json_loads
+from utils.storage_factory import get_storage_manager
 
 # Default GUID to use when no specific user GUID is provided
 # Memorable pattern related to "copilot" that follows UUID format rules
@@ -100,7 +101,7 @@ def load_agents_from_folder(user_guid=None):
             logging.error(f"Error loading agent {file}: {str(e)}")
             continue
 
-    storage_manager = AzureFileStorageManager()
+    storage_manager = get_storage_manager()
 
     # Load enabled agents list for this GUID
     enabled_agents = None
@@ -253,7 +254,7 @@ class Assistant:
         
         self.shared_memory = None
         self.user_memory = None
-        self.storage_manager = AzureFileStorageManager()
+        self.storage_manager = get_storage_manager()
 
         # Initialize with the default user GUID memory
         self._initialize_context_memory(DEFAULT_USER_GUID)

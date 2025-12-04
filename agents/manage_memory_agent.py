@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 from agents.basic_agent import BasicAgent
-from utils.azure_file_storage import AzureFileStorageManager
+from utils.storage_factory import get_storage_manager
 
 class ManageMemoryAgent(BasicAgent):
     def __init__(self):
@@ -42,7 +42,7 @@ class ManageMemoryAgent(BasicAgent):
                 "required": ["memory_type", "content"]
             }
         }
-        self.storage_manager = AzureFileStorageManager()
+        self.storage_manager = get_storage_manager()
         super().__init__(name=self.name, metadata=self.metadata)
 
     def perform(self, **kwargs):

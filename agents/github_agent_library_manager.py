@@ -1,5 +1,5 @@
 from agents.basic_agent import BasicAgent
-from utils.azure_file_storage import AzureFileStorageManager
+from utils.storage_factory import get_storage_manager
 import logging
 import requests
 import json
@@ -122,7 +122,7 @@ class GitHubAgentLibraryManager(BasicAgent):
                 }
             }
         }
-        self.storage_manager = AzureFileStorageManager()
+        self.storage_manager = get_storage_manager()
         super().__init__(name=self.name, metadata=self.metadata)
         
         # Cache for manifest

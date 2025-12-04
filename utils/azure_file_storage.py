@@ -1,19 +1,27 @@
 """
-Azure File Storage Manager with Multiple Authentication Methods
+Azure File Storage Manager with Entra ID Token Authentication
 
-This module provides Azure File Storage access using multiple authentication options:
-1. Connection String (recommended for local development)
-2. Managed Identity (recommended for Azure Function deployments)
-3. App Registration with Client Secret (for specific scenarios)
+This module provides Azure File Storage access using token-based authentication ONLY.
+Key-based authentication (connection strings) is NOT supported as the storage account
+has allowSharedKeyAccess disabled for security.
+
+Authentication Priority:
+1. App Registration (if AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET set)
+2. ChainedTokenCredential:
+   - ManagedIdentityCredential (for Azure deployments - Function App, VM, etc.)
+   - AzureCliCredential (for local development - requires 'az login')
 
 Environment Variables Required:
 - AZURE_STORAGE_ACCOUNT_NAME: Storage account name
 - AZURE_FILES_SHARE_NAME: File share name
 
-Authentication Priority (first available wins):
-1. AzureWebJobsStorage connection string (if contains AccountKey)
-2. App Registration (if AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET set)
-3. Managed Identity / DefaultAzureCredential (for Azure deployments)
+For Local Development:
+1. Run 'az login' to authenticate with Azure CLI
+2. Ensure your user account has 'Storage File Data Privileged Contributor' role
+   on the storage account
+
+For Azure Deployment:
+- The Function App's managed identity must have 'Storage File Data Privileged Contributor' role
 """
 
 import json
@@ -23,7 +31,12 @@ import re
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Union, Any, List
 
-from azure.identity import DefaultAzureCredential, ClientSecretCredential
+from azure.identity import (
+    ChainedTokenCredential,
+    ManagedIdentityCredential,
+    AzureCliCredential,
+    ClientSecretCredential
+)
 from azure.storage.fileshare import ShareServiceClient, ShareFileClient, ShareDirectoryClient
 from azure.storage.blob import BlobServiceClient, generate_blob_sas, BlobSasPermissions
 from azure.core.exceptions import ResourceNotFoundError, ResourceExistsError, AzureError
@@ -77,29 +90,21 @@ class AzureFileStorageManager:
         self._ensure_share_exists()
     
     def _init_auth(self):
-        """Initialize authentication - connection string preferred for local dev."""
-        # Try connection string first (best for local development)
-        connection_string = os.environ.get('AzureWebJobsStorage', '')
+        """
+        Initialize token-based authentication for Azure Files.
 
-        if connection_string and 'AccountKey=' in connection_string and 'UseDevelopmentStorage' not in connection_string:
-            # Use connection string authentication
-            logging.info("Using connection string authentication")
-            self.credential = None  # Not needed with connection string
-            self.share_service = ShareServiceClient.from_connection_string(connection_string)
-            self.share_client = self.share_service.get_share_client(self.share_name)
+        NO connection string/key-based auth - storage account has allowSharedKeyAccess=false.
 
-            # Initialize Blob client from connection string too
-            self.blob_service = BlobServiceClient.from_connection_string(connection_string)
-            logging.info(f"Initialized connection string auth for storage account: {self.account_name}")
-            return
-
-        # Try App Registration credentials
+        Priority:
+        1. App Registration (if AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET set)
+        2. ChainedTokenCredential (ManagedIdentity -> AzureCli)
+        """
+        # Try App Registration credentials first (explicit service principal)
         tenant_id = os.environ.get('AZURE_TENANT_ID')
         client_id = os.environ.get('AZURE_CLIENT_ID')
         client_secret = os.environ.get('AZURE_CLIENT_SECRET')
 
         if tenant_id and client_id and client_secret:
-            # Use App Registration credentials
             logging.info("Using App Registration (Client Secret) credentials")
             self.credential = ClientSecretCredential(
                 tenant_id=tenant_id,
@@ -107,17 +112,21 @@ class AzureFileStorageManager:
                 client_secret=client_secret
             )
         else:
-            # Use DefaultAzureCredential (Managed Identity for Azure)
-            # Note: For Azure Files, Managed Identity has limited support
-            logging.info("Using DefaultAzureCredential (Managed Identity)")
-            self.credential = DefaultAzureCredential()
+            # Use ChainedTokenCredential - much faster and more predictable than DefaultAzureCredential
+            # Order: ManagedIdentity first (Azure), then AzureCli (local dev with 'az login')
+            logging.info("Using ChainedTokenCredential (ManagedIdentity -> AzureCli)")
+            self.credential = ChainedTokenCredential(
+                ManagedIdentityCredential(),  # Works in Azure (Function App, VM, etc.)
+                AzureCliCredential()          # Works locally after 'az login'
+            )
 
-        # Initialize File Share client with credential
+        # Initialize File Share client with token credential
+        # token_intent="backup" is REQUIRED for token auth - bypasses file/directory ACLs
         account_url = f"https://{self.account_name}.file.core.windows.net"
         self.share_service = ShareServiceClient(
             account_url=account_url,
             credential=self.credential,
-            token_intent="backup"  # Required for token auth with Azure Files
+            token_intent="backup"
         )
         self.share_client = self.share_service.get_share_client(self.share_name)
 
