@@ -104,20 +104,11 @@ echo ""
 PYTHON_CMD=$(find_python_311)
 
 if [[ -z "$PYTHON_CMD" ]]; then
-    echo_warn "Python 3.11 not found on system."
-
-    read -p "Would you like to install Python 3.11? [y/N] " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        install_python_311
-        PYTHON_CMD=$(find_python_311)
-        if [[ -z "$PYTHON_CMD" ]]; then
-            echo_error "Failed to install Python 3.11. Please install manually."
-            exit 1
-        fi
-    else
-        echo_error "Python 3.11 is required for Azure Functions v4 compatibility."
-        echo "Please install Python 3.11 and try again."
+    echo_warn "Python 3.11 not found on system. Installing automatically..."
+    install_python_311
+    PYTHON_CMD=$(find_python_311)
+    if [[ -z "$PYTHON_CMD" ]]; then
+        echo_error "Failed to install Python 3.11. Please install manually."
         exit 1
     fi
 fi
