@@ -312,10 +312,11 @@
       }
     },
     {
+      "comments": "Storage Blob Data Contributor role for Function App Managed Identity",
       "type": "Microsoft.Authorization/roleAssignments",
       "apiVersion": "2022-04-01",
-      "name": "[guid(resourceGroup().id, parameters('functionAppName'), 'StorageBlobDataContributor')]",
-      "scope": "[variables('storageAccountId')]",
+      "name": "[guid(parameters('storageAccountName'), parameters('functionAppName'), variables('storageBlobDataContributorRoleId'))]",
+      "scope": "[concat('Microsoft.Storage/storageAccounts/', parameters('storageAccountName'))]",
       "dependsOn": [
         "[variables('functionAppId')]",
         "[variables('storageAccountId')]"
@@ -327,16 +328,33 @@
       }
     },
     {
+      "comments": "Storage File Data SMB Share Contributor role for Function App Managed Identity",
       "type": "Microsoft.Authorization/roleAssignments",
       "apiVersion": "2022-04-01",
-      "name": "[guid(resourceGroup().id, parameters('functionAppName'), 'StorageFileDataSmbShareContributor')]",
-      "scope": "[variables('storageAccountId')]",
+      "name": "[guid(parameters('storageAccountName'), parameters('functionAppName'), variables('storageFileDataSmbShareContributorRoleId'))]",
+      "scope": "[concat('Microsoft.Storage/storageAccounts/', parameters('storageAccountName'))]",
       "dependsOn": [
         "[variables('functionAppId')]",
         "[variables('storageAccountId')]"
       ],
       "properties": {
         "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('storageFileDataSmbShareContributorRoleId'))]",
+        "principalId": "[reference(variables('functionAppId'), '2023-12-01', 'Full').identity.principalId]",
+        "principalType": "ServicePrincipal"
+      }
+    },
+    {
+      "comments": "Storage File Data Privileged Contributor role for Function App Managed Identity (required for Azure Files token auth)",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "name": "[guid(parameters('storageAccountName'), parameters('functionAppName'), '69566ab7-960f-475b-8e7c-b3118f30c6bd')]",
+      "scope": "[concat('Microsoft.Storage/storageAccounts/', parameters('storageAccountName'))]",
+      "dependsOn": [
+        "[variables('functionAppId')]",
+        "[variables('storageAccountId')]"
+      ],
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '69566ab7-960f-475b-8e7c-b3118f30c6bd')]",
         "principalId": "[reference(variables('functionAppId'), '2023-12-01', 'Full').identity.principalId]",
         "principalType": "ServicePrincipal"
       }
