@@ -39,3 +39,9 @@ deployment/
 .vscode/tasks.json
 run.bat
 run.ps1
+
+# Config files with secrets - NEVER commit these
+copilot365-config.json
+copilot365-full-profile.json
+*-config.json
+*-profile.json

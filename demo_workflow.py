@@ -296,9 +296,9 @@ def test_api_call():
     """Test via HTTP API"""
     print_header("🌐 API Test")
 
-    # Configuration
+    # Configuration - API key should be set via environment variable
     API_URL = "https://copilot365-4ovzneuimhd2g.azurewebsites.net/api/businessinsightbot_function"
-    API_KEY = "REDACTED_API_KEY"
+    API_KEY = os.environ.get("COPILOT365_API_KEY", "")  # Set via: export COPILOT365_API_KEY=your_key
 
     LOCAL_URL = "http://localhost:7071/api/businessinsightbot_function"
 
