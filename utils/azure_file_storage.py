@@ -142,15 +142,20 @@ class AzureFileStorageManager:
     def _ensure_share_exists(self):
         """Ensure the file share and default directories exist."""
         try:
-            # Create share if it doesn't exist
+            # NOTE: With token-based auth, we cannot create shares (management plane).
+            # The share MUST be created beforehand via Azure CLI/Portal/ARM:
+            #   az storage share-rm create --name <share> --storage-account <account> -g <rg>
+            # We just verify the share exists by listing the root directory.
             try:
-                self.share_client.create_share()
-                logging.info(f"Created file share: {self.share_name}")
-            except ResourceExistsError:
-                logging.debug(f"File share already exists: {self.share_name}")
-            except AzureError as e:
-                if "ShareAlreadyExists" not in str(e):
-                    raise
+                dir_client = self.share_client.get_directory_client("")
+                list(dir_client.list_directories_and_files())
+                logging.debug(f"File share verified: {self.share_name}")
+            except ResourceNotFoundError:
+                raise ValueError(
+                    f"File share '{self.share_name}' does not exist. "
+                    f"Create it with: az storage share-rm create --name {self.share_name} "
+                    f"--storage-account {self.account_name} --resource-group <your-rg>"
+                )
 
             # Ensure shared memories directory exists
             self.ensure_directory_exists(self.shared_memory_path)
