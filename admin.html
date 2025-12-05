@@ -1,0 +1,2917 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Copilot365 Config Admin</title>
+    <style>
+        :root {
+            --bg-primary: #0f0f23;
+            --bg-secondary: #1a1a2e;
+            --bg-tertiary: #16213e;
+            --bg-card: #1e1e3f;
+            --accent-primary: #00d4ff;
+            --accent-secondary: #7b2cbf;
+            --accent-success: #00ff88;
+            --accent-warning: #ffaa00;
+            --accent-danger: #ff4757;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0c0;
+            --text-muted: #6c6c8a;
+            --border-color: #2d2d5a;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            --glow: 0 0 20px rgba(0, 212, 255, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1.5rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: var(--glow);
+        }
+
+        .logo h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo span {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        /* Status indicator */
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-card);
+            border-radius: 8px;
+            font-size: 0.85rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-success);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Main layout */
+        .main-container {
+            display: flex;
+            min-height: calc(100vh - 80px);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            padding: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .nav-section {
+            margin-bottom: 2rem;
+        }
+
+        .nav-section h3 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+            padding-left: 0.75rem;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+            margin-bottom: 0.25rem;
+        }
+
+        .nav-item:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .nav-item.active {
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(123, 44, 191, 0.2));
+            color: var(--accent-primary);
+            border: 1px solid var(--accent-primary);
+        }
+
+        .nav-icon {
+            font-size: 1.2rem;
+            width: 24px;
+            text-align: center;
+        }
+
+        /* Content area */
+        .content {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .section-header {
+            margin-bottom: 2rem;
+        }
+
+        .section-header h2 {
+            font-size: 1.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .section-header p {
+            color: var(--text-secondary);
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--glow);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-secondary);
+            border-color: var(--accent-primary);
+        }
+
+        .btn-success {
+            background: var(--accent-success);
+            color: var(--bg-primary);
+        }
+
+        .btn-warning {
+            background: var(--accent-warning);
+            color: var(--bg-primary);
+        }
+
+        .btn-danger {
+            background: var(--accent-danger);
+            color: white;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+        }
+
+        .form-textarea {
+            min-height: 200px;
+            font-family: 'Fira Code', 'Consolas', monospace;
+            font-size: 0.85rem;
+            resize: vertical;
+        }
+
+        /* File upload */
+        .file-upload {
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 3rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: var(--bg-tertiary);
+        }
+
+        .file-upload:hover, .file-upload.dragover {
+            border-color: var(--accent-primary);
+            background: rgba(0, 212, 255, 0.05);
+        }
+
+        .file-upload-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: var(--accent-primary);
+        }
+
+        .file-upload input[type="file"] {
+            display: none;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+
+        .tab {
+            padding: 0.75rem 1.25rem;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+            border: 1px solid transparent;
+            border-bottom: none;
+        }
+
+        .tab:hover {
+            color: var(--text-primary);
+            background: var(--bg-tertiary);
+        }
+
+        .tab.active {
+            color: var(--accent-primary);
+            background: var(--bg-card);
+            border-color: var(--border-color);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* JSON Editor */
+        .json-editor {
+            position: relative;
+        }
+
+        .json-editor .line-numbers {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 40px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            padding: 0.75rem 0.5rem;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-align: right;
+            user-select: none;
+            overflow: hidden;
+        }
+
+        .json-editor textarea {
+            padding-left: 50px !important;
+        }
+
+        /* Config preview */
+        .config-preview {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 1rem;
+            overflow-x: auto;
+        }
+
+        .config-preview pre {
+            font-family: 'Fira Code', 'Consolas', monospace;
+            font-size: 0.85rem;
+            margin: 0;
+            white-space: pre-wrap;
+        }
+
+        /* Merge view */
+        .merge-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .merge-panel {
+            background: var(--bg-tertiary);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .merge-panel-header {
+            padding: 1rem;
+            background: var(--bg-secondary);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .merge-panel-content {
+            padding: 1rem;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        /* Conflict item */
+        .conflict-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .conflict-key {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9rem;
+            color: var(--accent-primary);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .conflict-values {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .conflict-value {
+            background: var(--bg-tertiary);
+            padding: 0.75rem;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.8rem;
+        }
+
+        .conflict-value.current {
+            border-left: 3px solid var(--accent-primary);
+        }
+
+        .conflict-value.incoming {
+            border-left: 3px solid var(--accent-warning);
+        }
+
+        .conflict-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+
+        .conflict-actions .btn {
+            flex: 1;
+            padding: 0.5rem;
+            font-size: 0.8rem;
+        }
+
+        /* Stats grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-top: 0.25rem;
+        }
+
+        /* Toast notifications */
+        .toast-container {
+            position: fixed;
+            top: 1.5rem;
+            right: 1.5rem;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .toast {
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            animation: slideIn 0.3s ease;
+            min-width: 300px;
+        }
+
+        .toast.success {
+            border-left: 4px solid var(--accent-success);
+        }
+
+        .toast.error {
+            border-left: 4px solid var(--accent-danger);
+        }
+
+        .toast.warning {
+            border-left: 4px solid var(--accent-warning);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow: hidden;
+            transform: scale(0.9);
+            transition: transform 0.3s;
+        }
+
+        .modal-overlay.active .modal {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+            overflow-y: auto;
+            max-height: 60vh;
+        }
+
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+        }
+
+        /* Diff highlighting */
+        .diff-added {
+            background: rgba(0, 255, 136, 0.1);
+            border-left: 3px solid var(--accent-success);
+        }
+
+        .diff-removed {
+            background: rgba(255, 71, 87, 0.1);
+            border-left: 3px solid var(--accent-danger);
+        }
+
+        .diff-modified {
+            background: rgba(255, 170, 0, 0.1);
+            border-left: 3px solid var(--accent-warning);
+        }
+
+        /* History list */
+        .history-list {
+            list-style: none;
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            transition: background 0.2s;
+        }
+
+        .history-item:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .history-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: var(--bg-tertiary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .history-info {
+            flex: 1;
+        }
+
+        .history-title {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+
+        .history-meta {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* Loading spinner */
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .merge-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+
+            .header {
+                padding: 1rem;
+            }
+
+            .content {
+                padding: 1rem;
+            }
+        }
+
+        /* Code syntax colors */
+        .json-key { color: #9cdcfe; }
+        .json-string { color: #ce9178; }
+        .json-number { color: #b5cea8; }
+        .json-boolean { color: #569cd6; }
+        .json-null { color: #569cd6; }
+
+        /* Quick actions bar */
+        .quick-actions {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--bg-tertiary);
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .quick-action {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+        }
+
+        .quick-action:hover {
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+            transform: translateY(-2px);
+        }
+
+        /* Config summary styling */
+        .config-summary {
+            min-height: 100px;
+        }
+
+        /* Conflict section styling */
+        .conflict-section {
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1rem;
+            background: var(--bg-card);
+        }
+
+        /* Merge summary cards */
+        .merge-stat-card {
+            background: var(--bg-tertiary);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        /* Path code styling */
+        .conflict-item code {
+            background: var(--bg-secondary);
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            color: var(--accent-primary);
+        }
+
+        /* Scrollable config preview */
+        .config-preview {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        /* Tree view for nested objects */
+        .tree-view {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+        }
+
+        .tree-node {
+            padding-left: 1.5rem;
+            border-left: 1px solid var(--border-color);
+            margin-left: 0.5rem;
+        }
+
+        .tree-key {
+            color: var(--accent-primary);
+        }
+
+        .tree-value {
+            color: var(--text-secondary);
+        }
+
+        .tree-toggle {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .tree-toggle:hover {
+            color: var(--accent-primary);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="logo">
+            <div class="logo-icon">&#9881;</div>
+            <div>
+                <h1>Config Admin</h1>
+                <span>Copilot365 Configuration Manager</span>
+            </div>
+        </div>
+        <div class="header-actions">
+            <div class="status-badge">
+                <span class="status-dot"></span>
+                <span id="connectionStatus">Connected</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <nav class="nav-section">
+                <h3>Configuration</h3>
+                <div class="nav-item active" data-section="dashboard">
+                    <span class="nav-icon">&#128202;</span>
+                    Dashboard
+                </div>
+                <div class="nav-item" data-section="current">
+                    <span class="nav-icon">&#128196;</span>
+                    Current Config
+                </div>
+                <div class="nav-item" data-section="import">
+                    <span class="nav-icon">&#128229;</span>
+                    Import
+                </div>
+                <div class="nav-item" data-section="export">
+                    <span class="nav-icon">&#128228;</span>
+                    Export
+                </div>
+                <div class="nav-item" data-section="merge">
+                    <span class="nav-icon">&#128279;</span>
+                    Merge
+                </div>
+            </nav>
+
+            <nav class="nav-section">
+                <h3>Advanced</h3>
+                <div class="nav-item" data-section="agents">
+                    <span class="nav-icon">&#129302;</span>
+                    Agent Config
+                </div>
+                <div class="nav-item" data-section="workflows">
+                    <span class="nav-icon">&#9881;</span>
+                    Workflows
+                </div>
+                <div class="nav-item" data-section="history">
+                    <span class="nav-icon">&#128337;</span>
+                    History
+                </div>
+            </nav>
+
+            <nav class="nav-section">
+                <h3>Settings</h3>
+                <div class="nav-item" data-section="endpoints">
+                    <span class="nav-icon">&#127760;</span>
+                    API Endpoints
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="content">
+            <!-- Dashboard Section -->
+            <section id="dashboard" class="section active">
+                <div class="section-header">
+                    <h2>Configuration Dashboard</h2>
+                    <p>Overview of your Copilot365 configuration</p>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="statSettings">-</div>
+                        <div class="stat-label">Config Settings</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statAgents">-</div>
+                        <div class="stat-label">Agents Loaded</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statWorkflows">-</div>
+                        <div class="stat-label">Workflows</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statHistory">-</div>
+                        <div class="stat-label">History Items</div>
+                    </div>
+                </div>
+
+                <div class="quick-actions">
+                    <div class="quick-action" onclick="switchSection('export')">
+                        <span>&#128228;</span> Export All
+                    </div>
+                    <div class="quick-action" onclick="switchSection('import')">
+                        <span>&#128229;</span> Import Config
+                    </div>
+                    <div class="quick-action" onclick="backupConfig()">
+                        <span>&#128190;</span> Create Backup
+                    </div>
+                    <div class="quick-action" onclick="validateConfig()">
+                        <span>&#9989;</span> Validate
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">&#128161; Quick Config</div>
+                    </div>
+                    <div class="config-preview">
+                        <pre id="quickConfigPreview">Loading configuration...</pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Current Config Section -->
+            <section id="current" class="section">
+                <div class="section-header">
+                    <h2>Current Configuration</h2>
+                    <p>View and edit your active configuration</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">&#128196; local.settings.json</div>
+                        <div class="btn-group">
+                            <button class="btn btn-secondary" onclick="refreshConfig()">
+                                &#8635; Refresh
+                            </button>
+                            <button class="btn btn-primary" onclick="saveConfig()">
+                                &#128190; Save Changes
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <textarea id="currentConfigEditor" class="form-textarea" style="min-height: 400px;"></textarea>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Import Section -->
+            <section id="import" class="section">
+                <div class="section-header">
+                    <h2>Import Configuration</h2>
+                    <p>Import configuration from file or paste JSON directly</p>
+                </div>
+
+                <div class="tabs">
+                    <div class="tab active" data-tab="import-file">Upload File</div>
+                    <div class="tab" data-tab="import-paste">Paste JSON</div>
+                    <div class="tab" data-tab="import-url">From URL</div>
+                </div>
+
+                <!-- File Upload Tab -->
+                <div id="import-file" class="tab-content active">
+                    <div class="card">
+                        <div class="file-upload" id="fileDropZone">
+                            <div class="file-upload-icon">&#128194;</div>
+                            <h3>Drag & Drop Configuration File</h3>
+                            <p style="color: var(--text-secondary); margin: 0.5rem 0;">or click to browse</p>
+                            <p style="color: var(--text-muted); font-size: 0.85rem;">Supports: .json</p>
+                            <input type="file" id="fileInput" accept=".json">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Paste JSON Tab -->
+                <div id="import-paste" class="tab-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">&#128203; Paste Configuration JSON</div>
+                        </div>
+                        <div class="form-group">
+                            <textarea id="importPasteArea" class="form-textarea" placeholder='{"IsEncrypted": false, "Values": {...}}'></textarea>
+                        </div>
+                        <button class="btn btn-primary" onclick="importFromPaste()">
+                            &#128229; Import Configuration
+                        </button>
+                    </div>
+                </div>
+
+                <!-- From URL Tab -->
+                <div id="import-url" class="tab-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">&#127760; Import from URL</div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Configuration URL</label>
+                            <input type="url" id="importUrlInput" class="form-input" placeholder="https://example.com/config.json">
+                        </div>
+                        <button class="btn btn-primary" onclick="importFromUrl()">
+                            &#128229; Fetch & Import
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Import Preview -->
+                <div id="importPreviewCard" class="card" style="display: none;">
+                    <div class="card-header">
+                        <div class="card-title">&#128270; Import Preview</div>
+                        <div class="btn-group">
+                            <button class="btn btn-secondary" onclick="cancelImport()">Cancel</button>
+                            <button class="btn btn-warning" onclick="showMergeFromImport()">Merge with Current</button>
+                            <button class="btn btn-success" onclick="applyImport()">Replace Current</button>
+                        </div>
+                    </div>
+                    <div class="config-preview">
+                        <pre id="importPreviewContent"></pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Export Section -->
+            <section id="export" class="section">
+                <div class="section-header">
+                    <h2>Export Configuration</h2>
+                    <p>Export your configuration for backup or sharing</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">&#128230; Export Options</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Export Format</label>
+                        <select id="exportFormat" class="form-select">
+                            <option value="json">JSON (Standard)</option>
+                            <option value="json-pretty">JSON (Pretty Printed)</option>
+                            <option value="env">Environment Variables (.env)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Include Sections</label>
+                        <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 0.5rem;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" id="exportSettings" checked> App Settings
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" id="exportSecrets" checked> Secrets/Keys
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" id="exportAgents"> Agent Config
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" id="exportWorkflows"> Workflows
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Filename</label>
+                        <input type="text" id="exportFilename" class="form-input" value="copilot365-config">
+                    </div>
+
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="exportConfig()">
+                            &#128190; Download Export
+                        </button>
+                        <button class="btn btn-secondary" onclick="copyExportToClipboard()">
+                            &#128203; Copy to Clipboard
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">&#128065; Export Preview</div>
+                    </div>
+                    <div class="config-preview">
+                        <pre id="exportPreview">Select export options above...</pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Merge Section -->
+            <section id="merge" class="section">
+                <div class="section-header">
+                    <h2>Merge Configuration</h2>
+                    <p>Combine configurations with smart deep merging</p>
+                </div>
+
+                <!-- Config Type Detection -->
+                <div class="card" id="mergeConfigTypes" style="display: none;">
+                    <div class="card-header">
+                        <div class="card-title">&#128269; Configuration Analysis</div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                        <div id="currentConfigSummary" class="config-summary"></div>
+                        <div id="incomingConfigSummary" class="config-summary"></div>
+                    </div>
+                </div>
+
+                <!-- Smart Merge Options for app-export configs -->
+                <div class="card" id="smartMergeOptions" style="display: none;">
+                    <div class="card-header">
+                        <div class="card-title">&#9881; Smart Merge Options</div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label">&#127760; Endpoints</label>
+                            <select id="mergeEndpointsStrategy" class="form-select" onchange="updateMergeOption('endpoints', this.value)">
+                                <option value="merge-all">Merge All (combine both)</option>
+                                <option value="prefer-current">Keep Current Only</option>
+                                <option value="prefer-incoming">Use Incoming Only</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label">&#128100; Users</label>
+                            <select id="mergeUsersStrategy" class="form-select" onchange="updateMergeOption('users', this.value)">
+                                <option value="merge-all">Merge All</option>
+                                <option value="prefer-current">Keep Current Only</option>
+                                <option value="prefer-incoming">Use Incoming Only</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label">&#128172; Chats</label>
+                            <select id="mergeChatsStrategy" class="form-select" onchange="updateMergeOption('chats', this.value)">
+                                <option value="merge-messages">Merge & Combine Messages</option>
+                                <option value="prefer-current">Keep Current Only</option>
+                                <option value="prefer-incoming">Use Incoming Only</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label">&#9881; Settings</label>
+                            <select id="mergeSettingsStrategy" class="form-select" onchange="updateMergeOption('settings', this.value)">
+                                <option value="prefer-incoming">Prefer Incoming</option>
+                                <option value="prefer-current">Prefer Current</option>
+                                <option value="merge-all">Merge All</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Traditional merge strategy for simple configs -->
+                <div class="card" id="simpleMergeOptions">
+                    <div class="card-header">
+                        <div class="card-title">&#128279; Merge Strategy</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Default Conflict Resolution</label>
+                        <select id="mergeStrategy" class="form-select">
+                            <option value="incoming">Prefer Incoming (New values win)</option>
+                            <option value="current">Prefer Current (Keep existing)</option>
+                            <option value="manual">Manual (Resolve each conflict)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="merge-container">
+                    <div class="merge-panel">
+                        <div class="merge-panel-header">
+                            <span>&#128196; Current Configuration</span>
+                            <span id="currentConfigBadge" style="font-size: 0.8rem; color: var(--accent-primary);">Base</span>
+                        </div>
+                        <div class="merge-panel-content">
+                            <pre id="mergeCurrentPreview" style="font-size: 0.8rem;">Load current config...</pre>
+                        </div>
+                    </div>
+
+                    <div class="merge-panel">
+                        <div class="merge-panel-header">
+                            <span>&#128229; Incoming Configuration</span>
+                            <button class="btn btn-secondary" style="padding: 0.4rem 0.75rem; font-size: 0.8rem;" onclick="loadMergeIncoming()">
+                                Load File
+                            </button>
+                        </div>
+                        <div class="merge-panel-content">
+                            <textarea id="mergeIncomingInput" class="form-textarea" style="min-height: 300px;" placeholder="Paste incoming configuration JSON here..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Merge Summary -->
+                <div class="card" id="mergeSummaryCard" style="margin-top: 1.5rem; display: none;">
+                    <div class="card-header">
+                        <div class="card-title">&#128202; Merge Summary</div>
+                    </div>
+                    <div id="mergeSummary" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+                        <!-- Summary stats will be populated here -->
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top: 1.5rem;">
+                    <div class="card-header">
+                        <div class="card-title">&#9888; Differences Detected</div>
+                        <span id="conflictCount" style="background: var(--accent-warning); color: var(--bg-primary); padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.85rem;">0</span>
+                    </div>
+                    <div id="conflictsList">
+                        <p style="color: var(--text-muted); text-align: center; padding: 2rem;">
+                            No conflicts detected. Load an incoming configuration to compare.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="btn-group" style="margin-top: 1.5rem;">
+                    <button class="btn btn-secondary" onclick="previewMerge()">
+                        &#128270; Preview Merge
+                    </button>
+                    <button class="btn btn-primary" onclick="quickMerge()">
+                        &#9889; Quick Smart Merge
+                    </button>
+                    <button class="btn btn-success" onclick="applyMerge()">
+                        &#9989; Apply Merged Configuration
+                    </button>
+                </div>
+            </section>
+
+            <!-- Agents Section -->
+            <section id="agents" class="section">
+                <div class="section-header">
+                    <h2>Agent Configuration</h2>
+                    <p>Manage enabled agents per user</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">&#129302; Available Agents</div>
+                    </div>
+                    <div id="agentsList" style="display: grid; gap: 0.75rem;">
+                        <!-- Agent items will be populated here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Workflows Section -->
+            <section id="workflows" class="section">
+                <div class="section-header">
+                    <h2>Workflow Definitions</h2>
+                    <p>Manage automation workflows</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">&#9881; Registered Workflows</div>
+                    </div>
+                    <div id="workflowsList">
+                        <!-- Workflow items will be populated here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- History Section -->
+            <section id="history" class="section">
+                <div class="section-header">
+                    <h2>Configuration History</h2>
+                    <p>View past configuration changes</p>
+                </div>
+
+                <div class="card">
+                    <ul class="history-list" id="historyList">
+                        <!-- History items will be populated here -->
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Endpoints Section -->
+            <section id="endpoints" class="section">
+                <div class="section-header">
+                    <h2>API Endpoints</h2>
+                    <p>Configure connection settings</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">&#127760; Function App Settings</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Local Endpoint</label>
+                        <input type="url" id="localEndpoint" class="form-input" value="http://localhost:7071">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Production Endpoint</label>
+                        <input type="url" id="prodEndpoint" class="form-input" value="https://copilot365-4ovzneuimhd2g.azurewebsites.net">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Function Key (for production)</label>
+                        <input type="password" id="functionKey" class="form-input" placeholder="Enter your function key">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Active Environment</label>
+                        <select id="activeEnv" class="form-select">
+                            <option value="local">Local Development</option>
+                            <option value="production">Production</option>
+                        </select>
+                    </div>
+
+                    <button class="btn btn-primary" onclick="saveEndpoints()">
+                        &#128190; Save Endpoint Settings
+                    </button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Merge File Input (hidden) -->
+    <input type="file" id="mergeFileInput" accept=".json" style="display: none;">
+
+    <!-- Modal for confirmations -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modalTitle">Confirm Action</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Modal content -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" id="modalConfirmBtn" onclick="confirmModal()">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================================
+        // State Management
+        // ============================================================================
+
+        const state = {
+            currentConfig: null,
+            importedConfig: null,
+            mergedConfig: null,
+            conflicts: [],
+            history: [],
+            configType: 'unknown', // 'local-settings', 'app-export', 'unknown'
+            mergeOptions: {
+                endpoints: 'merge-all',      // 'merge-all', 'prefer-current', 'prefer-incoming'
+                users: 'merge-all',
+                chats: 'merge-messages',     // 'merge-messages', 'prefer-current', 'prefer-incoming'
+                settings: 'prefer-incoming'
+            }
+        };
+
+        // ============================================================================
+        // Config Type Detection
+        // ============================================================================
+
+        function detectConfigType(config) {
+            if (!config || typeof config !== 'object') return 'unknown';
+
+            // Check for local.settings.json format
+            if (config.Values && config.hasOwnProperty('IsEncrypted')) {
+                return 'local-settings';
+            }
+
+            // Check for RAPPID backup format
+            if (config.rappid === true || config.backupType === 'RAPPID Settings Backup') {
+                return 'rappid';
+            }
+
+            // Check for app export format (has endpoints, users, chats, settings)
+            if (config.endpoints || config.users || config.chats || config.settings) {
+                return 'app-export';
+            }
+
+            return 'unknown';
+        }
+
+        function getConfigSummary(config) {
+            const type = detectConfigType(config);
+            const summary = { type, sections: [] };
+
+            if (type === 'local-settings') {
+                summary.sections.push({
+                    name: 'Values',
+                    count: config.Values ? Object.keys(config.Values).length : 0,
+                    icon: '&#9881;'
+                });
+            } else if (type === 'rappid' || type === 'app-export') {
+                if (config.endpoints) {
+                    const activeEndpoint = Object.values(config.endpoints).find(e => e.active);
+                    summary.sections.push({
+                        name: 'Endpoints',
+                        count: Object.keys(config.endpoints).length,
+                        icon: '&#127760;',
+                        extra: activeEndpoint ? `Active: ${activeEndpoint.name}` : null
+                    });
+                }
+                if (config.users) {
+                    summary.sections.push({
+                        name: 'Users',
+                        count: Object.keys(config.users).length,
+                        icon: '&#128100;'
+                    });
+                }
+                if (config.chats) {
+                    const chatCount = Object.values(config.chats).reduce((sum, userChats) =>
+                        sum + Object.keys(userChats || {}).length, 0);
+                    summary.sections.push({
+                        name: 'Chats',
+                        count: chatCount,
+                        icon: '&#128172;'
+                    });
+                }
+                if (config.settings) {
+                    summary.sections.push({
+                        name: 'Settings',
+                        count: Object.keys(config.settings).length,
+                        icon: '&#9881;'
+                    });
+                }
+                // RAPPID-specific fields
+                if (config.azureTTSKey) {
+                    summary.sections.push({
+                        name: 'TTS',
+                        count: 1,
+                        icon: '&#128266;',
+                        extra: config.ttsVoiceName || 'Configured'
+                    });
+                }
+                if (config.azureRegion) {
+                    summary.sections.push({
+                        name: 'Region',
+                        count: 1,
+                        icon: '&#127757;',
+                        extra: config.azureRegion
+                    });
+                }
+            }
+
+            return summary;
+        }
+
+        // ============================================================================
+        // Deep Merge Utilities
+        // ============================================================================
+
+        function isObject(item) {
+            return item && typeof item === 'object' && !Array.isArray(item);
+        }
+
+        function deepClone(obj) {
+            return JSON.parse(JSON.stringify(obj));
+        }
+
+        function getValueAtPath(obj, path) {
+            return path.split('.').reduce((acc, part) => acc?.[part], obj);
+        }
+
+        function setValueAtPath(obj, path, value) {
+            const parts = path.split('.');
+            let current = obj;
+            for (let i = 0; i < parts.length - 1; i++) {
+                if (!current[parts[i]]) current[parts[i]] = {};
+                current = current[parts[i]];
+            }
+            current[parts[parts.length - 1]] = value;
+        }
+
+        function deleteAtPath(obj, path) {
+            const parts = path.split('.');
+            let current = obj;
+            for (let i = 0; i < parts.length - 1; i++) {
+                if (!current[parts[i]]) return;
+                current = current[parts[i]];
+            }
+            delete current[parts[parts.length - 1]];
+        }
+
+        // Deep comparison that identifies all differences
+        function deepCompare(current, incoming, path = '', differences = []) {
+            const currentKeys = current ? Object.keys(current) : [];
+            const incomingKeys = incoming ? Object.keys(incoming) : [];
+            const allKeys = new Set([...currentKeys, ...incomingKeys]);
+
+            for (const key of allKeys) {
+                const currentPath = path ? `${path}.${key}` : key;
+                const currentVal = current?.[key];
+                const incomingVal = incoming?.[key];
+
+                // Both are objects - recurse
+                if (isObject(currentVal) && isObject(incomingVal)) {
+                    deepCompare(currentVal, incomingVal, currentPath, differences);
+                }
+                // Values differ (including one being undefined)
+                else if (JSON.stringify(currentVal) !== JSON.stringify(incomingVal)) {
+                    differences.push({
+                        path: currentPath,
+                        current: currentVal,
+                        incoming: incomingVal,
+                        type: currentVal === undefined ? 'added' :
+                              incomingVal === undefined ? 'removed' :
+                              (isObject(currentVal) || isObject(incomingVal) ||
+                               Array.isArray(currentVal) || Array.isArray(incomingVal)) ? 'object-modified' : 'modified',
+                        resolution: null
+                    });
+                }
+            }
+
+            return differences;
+        }
+
+        // Smart merge for endpoints (by ID)
+        function mergeEndpoints(current, incoming, strategy) {
+            if (strategy === 'prefer-current') return deepClone(current || {});
+            if (strategy === 'prefer-incoming') return deepClone(incoming || {});
+
+            // merge-all: Combine all endpoints, incoming overwrites duplicates
+            const merged = deepClone(current || {});
+            for (const [id, endpoint] of Object.entries(incoming || {})) {
+                if (merged[id]) {
+                    // Merge individual endpoint properties
+                    merged[id] = { ...merged[id], ...endpoint };
+                } else {
+                    merged[id] = deepClone(endpoint);
+                }
+            }
+            return merged;
+        }
+
+        // Smart merge for users (by ID)
+        function mergeUsers(current, incoming, strategy) {
+            if (strategy === 'prefer-current') return deepClone(current || {});
+            if (strategy === 'prefer-incoming') return deepClone(incoming || {});
+
+            const merged = deepClone(current || {});
+            for (const [userId, user] of Object.entries(incoming || {})) {
+                if (merged[userId]) {
+                    // Merge user properties, combine chat arrays
+                    merged[userId] = {
+                        ...merged[userId],
+                        ...user,
+                        chats: [...new Set([...(merged[userId].chats || []), ...(user.chats || [])])]
+                    };
+                    // Update lastActive to most recent
+                    if (user.lastActive && merged[userId].lastActive) {
+                        merged[userId].lastActive =
+                            new Date(user.lastActive) > new Date(merged[userId].lastActive)
+                                ? user.lastActive : merged[userId].lastActive;
+                    }
+                } else {
+                    merged[userId] = deepClone(user);
+                }
+            }
+            return merged;
+        }
+
+        // Smart merge for chats (by user then chat ID)
+        function mergeChats(current, incoming, strategy) {
+            if (strategy === 'prefer-current') return deepClone(current || {});
+            if (strategy === 'prefer-incoming') return deepClone(incoming || {});
+
+            const merged = deepClone(current || {});
+            for (const [userId, userChats] of Object.entries(incoming || {})) {
+                if (!merged[userId]) {
+                    merged[userId] = {};
+                }
+                for (const [chatId, chat] of Object.entries(userChats)) {
+                    if (merged[userId][chatId]) {
+                        // Merge messages - combine and dedupe by timestamp
+                        const existingMessages = merged[userId][chatId].messages || [];
+                        const incomingMessages = chat.messages || [];
+                        const messageMap = new Map();
+
+                        [...existingMessages, ...incomingMessages].forEach(msg => {
+                            const key = `${msg.timestamp}-${msg.role}-${msg.content?.substring(0, 50)}`;
+                            if (!messageMap.has(key)) {
+                                messageMap.set(key, msg);
+                            }
+                        });
+
+                        merged[userId][chatId] = {
+                            ...merged[userId][chatId],
+                            ...chat,
+                            messages: Array.from(messageMap.values()).sort((a, b) =>
+                                new Date(a.timestamp) - new Date(b.timestamp)
+                            )
+                        };
+
+                        // Update timestamps
+                        if (chat.updatedAt) {
+                            merged[userId][chatId].updatedAt =
+                                new Date(chat.updatedAt) > new Date(merged[userId][chatId].updatedAt || 0)
+                                    ? chat.updatedAt : merged[userId][chatId].updatedAt;
+                        }
+                    } else {
+                        merged[userId][chatId] = deepClone(chat);
+                    }
+                }
+            }
+            return merged;
+        }
+
+        // Smart merge for settings
+        function mergeSettings(current, incoming, strategy) {
+            if (strategy === 'prefer-current') return deepClone(current || {});
+            if (strategy === 'prefer-incoming') return deepClone(incoming || {});
+
+            // Default: incoming overwrites current
+            return { ...deepClone(current || {}), ...deepClone(incoming || {}) };
+        }
+
+        // Main smart merge function for app-export and RAPPID configs
+        function smartMergeAppExport(current, incoming, options = state.mergeOptions) {
+            const currentType = detectConfigType(current);
+            const incomingType = detectConfigType(incoming);
+
+            // Determine if this is a RAPPID config
+            const isRappid = currentType === 'rappid' || incomingType === 'rappid';
+
+            const merged = {
+                ...deepClone(current),
+                exportDate: new Date().toISOString(),
+                version: incoming.version || current.version || '1.0'
+            };
+
+            // Set RAPPID flags if either source is RAPPID
+            if (isRappid) {
+                merged.rappid = true;
+                merged.backupType = 'RAPPID Settings Backup';
+            }
+
+            // Merge each section with appropriate strategy
+            if (incoming.endpoints || current.endpoints) {
+                merged.endpoints = mergeEndpoints(current.endpoints, incoming.endpoints, options.endpoints);
+
+                // For RAPPID: ensure only one endpoint is active
+                if (isRappid && options.endpoints === 'merge-all') {
+                    // Keep the active status from incoming if it has one, otherwise from current
+                    const incomingActive = Object.values(incoming.endpoints || {}).find(e => e.active);
+                    if (incomingActive) {
+                        // Deactivate all, then activate the incoming active one
+                        for (const id of Object.keys(merged.endpoints)) {
+                            merged.endpoints[id].active = (id === incomingActive.id);
+                        }
+                    }
+                }
+            }
+
+            if (incoming.users || current.users) {
+                merged.users = mergeUsers(current.users, incoming.users, options.users);
+            }
+            if (incoming.chats || current.chats) {
+                merged.chats = mergeChats(current.chats, incoming.chats, options.chats);
+            }
+            if (incoming.settings || current.settings) {
+                merged.settings = mergeSettings(current.settings, incoming.settings, options.settings);
+            }
+
+            // RAPPID-specific fields - prefer incoming if set, otherwise keep current
+            const rappidFields = ['azureTTSKey', 'azureRegion', 'ttsVoiceName'];
+            for (const field of rappidFields) {
+                if (incoming[field] !== undefined && incoming[field] !== '') {
+                    merged[field] = incoming[field];
+                } else if (current[field] !== undefined) {
+                    merged[field] = current[field];
+                }
+            }
+
+            // Copy other top-level fields from incoming
+            const reservedKeys = ['endpoints', 'users', 'chats', 'settings', 'exportDate', 'version', 'rappid', 'backupType', ...rappidFields];
+            for (const key of Object.keys(incoming)) {
+                if (!reservedKeys.includes(key)) {
+                    merged[key] = incoming[key] !== undefined ? incoming[key] : current[key];
+                }
+            }
+
+            return merged;
+        }
+
+        // ============================================================================
+        // Initialization
+        // ============================================================================
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initNavigation();
+            initTabs();
+            initFileUpload();
+            loadConfig();
+            loadFromLocalStorage();
+            updateDashboard();
+        });
+
+        function loadFromLocalStorage() {
+            const saved = localStorage.getItem('copilot365-admin-state');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    if (parsed.currentConfig) {
+                        state.currentConfig = parsed.currentConfig;
+                        state.configType = detectConfigType(state.currentConfig);
+                    }
+                    state.history = parsed.history || [];
+                    state.mergeOptions = parsed.mergeOptions || state.mergeOptions;
+                } catch (e) {
+                    console.error('Failed to load from localStorage:', e);
+                }
+            }
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem('copilot365-admin-state', JSON.stringify({
+                currentConfig: state.currentConfig,
+                history: state.history,
+                mergeOptions: state.mergeOptions
+            }));
+        }
+
+        // ============================================================================
+        // Navigation
+        // ============================================================================
+
+        function initNavigation() {
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const section = item.dataset.section;
+                    switchSection(section);
+                });
+            });
+        }
+
+        function switchSection(sectionId) {
+            // Update nav items
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.toggle('active', item.dataset.section === sectionId);
+            });
+
+            // Update sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.toggle('active', section.id === sectionId);
+            });
+
+            // Special handling for sections
+            if (sectionId === 'current') {
+                refreshConfig();
+            } else if (sectionId === 'merge') {
+                updateMergePreview();
+            } else if (sectionId === 'export') {
+                updateExportPreview();
+            } else if (sectionId === 'agents') {
+                loadAgents();
+            } else if (sectionId === 'workflows') {
+                loadWorkflows();
+            } else if (sectionId === 'history') {
+                renderHistory();
+            }
+        }
+
+        // ============================================================================
+        // Tabs
+        // ============================================================================
+
+        function initTabs() {
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabId = tab.dataset.tab;
+                    const parent = tab.closest('.section');
+
+                    // Update tabs
+                    parent.querySelectorAll('.tab').forEach(t => {
+                        t.classList.toggle('active', t.dataset.tab === tabId);
+                    });
+
+                    // Update content
+                    parent.querySelectorAll('.tab-content').forEach(content => {
+                        content.classList.toggle('active', content.id === tabId);
+                    });
+                });
+            });
+        }
+
+        // ============================================================================
+        // File Upload
+        // ============================================================================
+
+        function initFileUpload() {
+            const dropZone = document.getElementById('fileDropZone');
+            const fileInput = document.getElementById('fileInput');
+
+            dropZone.addEventListener('click', () => fileInput.click());
+
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('dragover');
+            });
+
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('dragover');
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleFileUpload(files[0]);
+                }
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleFileUpload(e.target.files[0]);
+                }
+            });
+
+            // Merge file input
+            document.getElementById('mergeFileInput').addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleMergeFileUpload(e.target.files[0]);
+                }
+            });
+        }
+
+        function handleFileUpload(file) {
+            if (!file.name.endsWith('.json')) {
+                showToast('Please upload a JSON file', 'error');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const config = JSON.parse(e.target.result);
+                    state.importedConfig = config;
+                    showImportPreview(config);
+                    showToast('File loaded successfully', 'success');
+                } catch (err) {
+                    showToast('Invalid JSON file: ' + err.message, 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // ============================================================================
+        // Config Management
+        // ============================================================================
+
+        function loadConfig() {
+            // If we have a saved config from localStorage, use it
+            if (state.currentConfig) {
+                document.getElementById('currentConfigEditor').value = JSON.stringify(state.currentConfig, null, 2);
+                document.getElementById('quickConfigPreview').textContent = JSON.stringify(state.currentConfig, null, 2);
+                state.configType = detectConfigType(state.currentConfig);
+                updateDashboard();
+                return;
+            }
+
+            // Default sample RAPPID config
+            const defaultConfig = {
+                "rappid": true,
+                "backupType": "RAPPID Settings Backup",
+                "endpoints": {
+                    "copilot365-prod": {
+                        "id": "copilot365-prod",
+                        "name": "Copilot Agent 365 (Production)",
+                        "url": "https://copilot365-4ovzneuimhd2g.azurewebsites.net/api/businessinsightbot_function",
+                        "key": "",
+                        "guid": "c0p110t0-aaaa-bbbb-cccc-123456789abc",
+                        "active": true
+                    },
+                    "copilot365-local": {
+                        "id": "copilot365-local",
+                        "name": "Copilot Agent 365 (Local Dev)",
+                        "url": "http://localhost:7071/api/businessinsightbot_function",
+                        "key": "",
+                        "guid": "c0p110t0-aaaa-bbbb-cccc-123456789abc",
+                        "active": false
+                    }
+                },
+                "azureTTSKey": "",
+                "azureRegion": "eastus2",
+                "ttsVoiceName": "en-US-JennyNeural",
+                "exportDate": new Date().toISOString(),
+                "version": "1.0"
+            };
+
+            state.currentConfig = defaultConfig;
+            state.configType = detectConfigType(defaultConfig);
+            document.getElementById('currentConfigEditor').value = JSON.stringify(defaultConfig, null, 2);
+            document.getElementById('quickConfigPreview').textContent = JSON.stringify(defaultConfig, null, 2);
+
+            updateDashboard();
+        }
+
+        function refreshConfig() {
+            try {
+                const textarea = document.getElementById('currentConfigEditor');
+                if (textarea.value) {
+                    state.currentConfig = JSON.parse(textarea.value);
+                }
+                showToast('Configuration refreshed', 'success');
+            } catch (err) {
+                showToast('Invalid JSON: ' + err.message, 'error');
+            }
+        }
+
+        function saveConfig() {
+            try {
+                const textarea = document.getElementById('currentConfigEditor');
+                const config = JSON.parse(textarea.value);
+                state.currentConfig = config;
+
+                // Add to history
+                addToHistory('save', 'Configuration saved');
+
+                // Update quick preview
+                document.getElementById('quickConfigPreview').textContent = JSON.stringify(config, null, 2);
+
+                showToast('Configuration saved successfully', 'success');
+            } catch (err) {
+                showToast('Invalid JSON: ' + err.message, 'error');
+            }
+        }
+
+        function validateConfig() {
+            try {
+                const textarea = document.getElementById('currentConfigEditor');
+                const config = JSON.parse(textarea.value);
+
+                const issues = [];
+
+                // Check required fields
+                if (!config.Values) {
+                    issues.push('Missing "Values" object');
+                } else {
+                    if (!config.Values.AZURE_OPENAI_API_KEY) {
+                        issues.push('Missing AZURE_OPENAI_API_KEY');
+                    }
+                    if (!config.Values.AZURE_OPENAI_ENDPOINT) {
+                        issues.push('Missing AZURE_OPENAI_ENDPOINT');
+                    }
+                    if (!config.Values.AZURE_OPENAI_DEPLOYMENT_NAME) {
+                        issues.push('Missing AZURE_OPENAI_DEPLOYMENT_NAME');
+                    }
+                }
+
+                if (issues.length === 0) {
+                    showToast('Configuration is valid!', 'success');
+                } else {
+                    showToast('Issues found: ' + issues.join(', '), 'warning');
+                }
+            } catch (err) {
+                showToast('Invalid JSON: ' + err.message, 'error');
+            }
+        }
+
+        function backupConfig() {
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const filename = `copilot365-backup-${timestamp}.json`;
+
+            downloadJSON(state.currentConfig, filename);
+            addToHistory('backup', `Backup created: ${filename}`);
+            showToast('Backup downloaded', 'success');
+        }
+
+        // ============================================================================
+        // Import Functions
+        // ============================================================================
+
+        function showImportPreview(config) {
+            document.getElementById('importPreviewCard').style.display = 'block';
+            document.getElementById('importPreviewContent').textContent = JSON.stringify(config, null, 2);
+        }
+
+        function importFromPaste() {
+            try {
+                const text = document.getElementById('importPasteArea').value;
+                const config = JSON.parse(text);
+                state.importedConfig = config;
+                showImportPreview(config);
+                showToast('Configuration parsed successfully', 'success');
+            } catch (err) {
+                showToast('Invalid JSON: ' + err.message, 'error');
+            }
+        }
+
+        async function importFromUrl() {
+            const url = document.getElementById('importUrlInput').value;
+            if (!url) {
+                showToast('Please enter a URL', 'error');
+                return;
+            }
+
+            try {
+                showToast('Fetching configuration...', 'warning');
+                const response = await fetch(url);
+                const config = await response.json();
+                state.importedConfig = config;
+                showImportPreview(config);
+                showToast('Configuration fetched successfully', 'success');
+            } catch (err) {
+                showToast('Failed to fetch: ' + err.message, 'error');
+            }
+        }
+
+        function cancelImport() {
+            state.importedConfig = null;
+            document.getElementById('importPreviewCard').style.display = 'none';
+            document.getElementById('importPasteArea').value = '';
+        }
+
+        function applyImport() {
+            if (!state.importedConfig) {
+                showToast('No configuration to import', 'error');
+                return;
+            }
+
+            state.currentConfig = state.importedConfig;
+            document.getElementById('currentConfigEditor').value = JSON.stringify(state.importedConfig, null, 2);
+            document.getElementById('quickConfigPreview').textContent = JSON.stringify(state.importedConfig, null, 2);
+
+            addToHistory('import', 'Configuration imported (replace)');
+            cancelImport();
+            showToast('Configuration replaced successfully', 'success');
+
+            switchSection('current');
+        }
+
+        function showMergeFromImport() {
+            if (!state.importedConfig) {
+                showToast('No configuration to merge', 'error');
+                return;
+            }
+
+            document.getElementById('mergeIncomingInput').value = JSON.stringify(state.importedConfig, null, 2);
+            cancelImport();
+            switchSection('merge');
+            analyzeConflicts();
+        }
+
+        // ============================================================================
+        // Export Functions
+        // ============================================================================
+
+        function updateExportPreview() {
+            const format = document.getElementById('exportFormat').value;
+            const includeSettings = document.getElementById('exportSettings').checked;
+            const includeSecrets = document.getElementById('exportSecrets').checked;
+
+            let exportData = {};
+
+            if (state.currentConfig) {
+                exportData = JSON.parse(JSON.stringify(state.currentConfig));
+
+                if (!includeSecrets && exportData.Values) {
+                    // Mask sensitive values
+                    const sensitiveKeys = ['API_KEY', 'SECRET', 'PASSWORD', 'CONNECTION_STRING'];
+                    for (const key of Object.keys(exportData.Values)) {
+                        if (sensitiveKeys.some(sk => key.toUpperCase().includes(sk))) {
+                            exportData.Values[key] = '***REDACTED***';
+                        }
+                    }
+                }
+            }
+
+            let preview;
+            if (format === 'json') {
+                preview = JSON.stringify(exportData);
+            } else if (format === 'json-pretty') {
+                preview = JSON.stringify(exportData, null, 2);
+            } else if (format === 'env') {
+                preview = Object.entries(exportData.Values || {})
+                    .map(([k, v]) => `${k}="${v}"`)
+                    .join('\n');
+            }
+
+            document.getElementById('exportPreview').textContent = preview;
+        }
+
+        function exportConfig() {
+            const format = document.getElementById('exportFormat').value;
+            const filename = document.getElementById('exportFilename').value || 'copilot365-config';
+            const includeSecrets = document.getElementById('exportSecrets').checked;
+
+            let exportData = JSON.parse(JSON.stringify(state.currentConfig));
+
+            if (!includeSecrets && exportData.Values) {
+                const sensitiveKeys = ['API_KEY', 'SECRET', 'PASSWORD', 'CONNECTION_STRING'];
+                for (const key of Object.keys(exportData.Values)) {
+                    if (sensitiveKeys.some(sk => key.toUpperCase().includes(sk))) {
+                        exportData.Values[key] = '***REDACTED***';
+                    }
+                }
+            }
+
+            let content, ext, mimeType;
+
+            if (format === 'env') {
+                content = Object.entries(exportData.Values || {})
+                    .map(([k, v]) => `${k}="${v}"`)
+                    .join('\n');
+                ext = 'env';
+                mimeType = 'text/plain';
+            } else {
+                content = format === 'json-pretty'
+                    ? JSON.stringify(exportData, null, 2)
+                    : JSON.stringify(exportData);
+                ext = 'json';
+                mimeType = 'application/json';
+            }
+
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${filename}.${ext}`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            addToHistory('export', `Exported as ${filename}.${ext}`);
+            showToast('Configuration exported', 'success');
+        }
+
+        function copyExportToClipboard() {
+            const content = document.getElementById('exportPreview').textContent;
+            navigator.clipboard.writeText(content).then(() => {
+                showToast('Copied to clipboard', 'success');
+            });
+        }
+
+        // ============================================================================
+        // Merge Functions
+        // ============================================================================
+
+        function updateMergePreview() {
+            if (state.currentConfig) {
+                document.getElementById('mergeCurrentPreview').textContent =
+                    JSON.stringify(state.currentConfig, null, 2);
+            }
+        }
+
+        function loadMergeIncoming() {
+            document.getElementById('mergeFileInput').click();
+        }
+
+        function handleMergeFileUpload(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const config = JSON.parse(e.target.result);
+                    document.getElementById('mergeIncomingInput').value = JSON.stringify(config, null, 2);
+                    analyzeConflicts();
+                    showToast('File loaded for merge', 'success');
+                } catch (err) {
+                    showToast('Invalid JSON: ' + err.message, 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function updateMergeOption(key, value) {
+            state.mergeOptions[key] = value;
+            saveToLocalStorage();
+            // Re-analyze if we have incoming config
+            const incomingText = document.getElementById('mergeIncomingInput').value;
+            if (incomingText) {
+                analyzeConflicts();
+            }
+        }
+
+        function analyzeConflicts() {
+            const incomingText = document.getElementById('mergeIncomingInput').value;
+            if (!incomingText) return;
+
+            try {
+                const incoming = JSON.parse(incomingText);
+                state.importedConfig = incoming;
+                state.conflicts = [];
+
+                const currentType = detectConfigType(state.currentConfig);
+                const incomingType = detectConfigType(incoming);
+
+                // Show config analysis
+                document.getElementById('mergeConfigTypes').style.display = 'block';
+                renderConfigSummary('currentConfigSummary', state.currentConfig, 'Current');
+                renderConfigSummary('incomingConfigSummary', incoming, 'Incoming');
+
+                // Show appropriate merge options based on config type
+                const isSmartMerge = ['app-export', 'rappid'].includes(currentType) ||
+                                     ['app-export', 'rappid'].includes(incomingType);
+                document.getElementById('smartMergeOptions').style.display = isSmartMerge ? 'block' : 'none';
+                document.getElementById('simpleMergeOptions').style.display = isSmartMerge ? 'none' : 'block';
+
+                // Deep compare to find all differences
+                state.conflicts = deepCompare(state.currentConfig, incoming);
+
+                // Show merge summary
+                showMergeSummary(state.currentConfig, incoming);
+
+                renderConflicts();
+            } catch (err) {
+                showToast('Invalid incoming JSON: ' + err.message, 'error');
+            }
+        }
+
+        function renderConfigSummary(containerId, config, label) {
+            const container = document.getElementById(containerId);
+            const summary = getConfigSummary(config);
+
+            const typeLabels = {
+                'local-settings': 'Azure Function Settings',
+                'app-export': 'App Export (Full)',
+                'rappid': 'RAPPID Settings Backup',
+                'unknown': 'Generic JSON'
+            };
+
+            const typeColors = {
+                'local-settings': 'var(--accent-primary)',
+                'app-export': 'var(--accent-success)',
+                'rappid': 'var(--accent-warning)',
+                'unknown': 'var(--text-muted)'
+            };
+
+            container.innerHTML = `
+                <div style="background: var(--bg-tertiary); padding: 1rem; border-radius: 8px; border-left: 3px solid ${typeColors[summary.type]};">
+                    <div style="font-weight: 600; margin-bottom: 0.5rem; color: var(--accent-primary);">${label}</div>
+                    <div style="font-size: 0.85rem; color: ${typeColors[summary.type]}; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+                        ${summary.type === 'rappid' ? '&#9889;' : '&#128196;'} ${typeLabels[summary.type]}
+                        ${config?.version ? `<span style="font-size: 0.75rem; color: var(--text-muted);">v${config.version}</span>` : ''}
+                    </div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                        ${summary.sections.map(s => `
+                            <span style="background: var(--bg-card); padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.8rem;" title="${s.extra || ''}">
+                                ${s.icon} ${s.name}: <strong>${s.count}</strong>
+                                ${s.extra ? `<span style="color: var(--text-muted); font-size: 0.7rem;"> (${s.extra})</span>` : ''}
+                            </span>
+                        `).join('')}
+                    </div>
+                    ${config?.exportDate ? `
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">
+                            Exported: ${new Date(config.exportDate).toLocaleString()}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function showMergeSummary(current, incoming) {
+            const currentType = detectConfigType(current);
+            const incomingType = detectConfigType(incoming);
+
+            // Show for app-export or rappid types
+            const isSmartMerge = ['app-export', 'rappid'].includes(currentType) ||
+                                 ['app-export', 'rappid'].includes(incomingType);
+
+            if (!isSmartMerge) {
+                document.getElementById('mergeSummaryCard').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('mergeSummaryCard').style.display = 'block';
+
+            const stats = [];
+
+            // Count endpoints
+            const currentEndpoints = Object.keys(current?.endpoints || {});
+            const incomingEndpoints = Object.keys(incoming?.endpoints || {});
+            const uniqueEndpoints = new Set([...currentEndpoints, ...incomingEndpoints]);
+            const newEndpoints = incomingEndpoints.filter(e => !currentEndpoints.includes(e));
+
+            // Find active endpoints
+            const currentActive = Object.values(current?.endpoints || {}).find(e => e.active);
+            const incomingActive = Object.values(incoming?.endpoints || {}).find(e => e.active);
+
+            stats.push({
+                icon: '&#127760;',
+                label: 'Endpoints',
+                current: currentEndpoints.length,
+                incoming: incomingEndpoints.length,
+                merged: uniqueEndpoints.size,
+                new: newEndpoints.length,
+                extra: incomingActive ? `Active: ${incomingActive.name?.substring(0, 20)}` : (currentActive ? `Active: ${currentActive.name?.substring(0, 20)}` : null)
+            });
+
+            // Count users (if present)
+            if (current?.users || incoming?.users) {
+                const currentUsers = Object.keys(current?.users || {});
+                const incomingUsers = Object.keys(incoming?.users || {});
+                const uniqueUsers = new Set([...currentUsers, ...incomingUsers]);
+                const newUsers = incomingUsers.filter(u => !currentUsers.includes(u));
+                stats.push({
+                    icon: '&#128100;',
+                    label: 'Users',
+                    current: currentUsers.length,
+                    incoming: incomingUsers.length,
+                    merged: uniqueUsers.size,
+                    new: newUsers.length
+                });
+            }
+
+            // Count chats (if present)
+            if (current?.chats || incoming?.chats) {
+                const countChats = (config) => {
+                    if (!config?.chats) return 0;
+                    return Object.values(config.chats).reduce((sum, userChats) =>
+                        sum + Object.keys(userChats || {}).length, 0);
+                };
+                stats.push({
+                    icon: '&#128172;',
+                    label: 'Chats',
+                    current: countChats(current),
+                    incoming: countChats(incoming),
+                    merged: '~',
+                    new: '-'
+                });
+            }
+
+            // Settings (if present)
+            if (current?.settings || incoming?.settings) {
+                stats.push({
+                    icon: '&#9881;',
+                    label: 'Settings',
+                    current: Object.keys(current?.settings || {}).length,
+                    incoming: Object.keys(incoming?.settings || {}).length,
+                    merged: '-',
+                    new: '-'
+                });
+            }
+
+            // TTS config (RAPPID specific)
+            if (current?.azureTTSKey || incoming?.azureTTSKey) {
+                stats.push({
+                    icon: '&#128266;',
+                    label: 'TTS',
+                    current: current?.azureTTSKey ? 1 : 0,
+                    incoming: incoming?.azureTTSKey ? 1 : 0,
+                    merged: (current?.azureTTSKey || incoming?.azureTTSKey) ? 1 : 0,
+                    new: 0,
+                    extra: incoming?.ttsVoiceName || current?.ttsVoiceName
+                });
+            }
+
+            // Azure Region (RAPPID specific)
+            if (current?.azureRegion || incoming?.azureRegion) {
+                stats.push({
+                    icon: '&#127757;',
+                    label: 'Region',
+                    current: current?.azureRegion ? 1 : 0,
+                    incoming: incoming?.azureRegion ? 1 : 0,
+                    merged: 1,
+                    new: 0,
+                    extra: incoming?.azureRegion || current?.azureRegion
+                });
+            }
+
+            document.getElementById('mergeSummary').innerHTML = stats.map(s => `
+                <div style="background: var(--bg-tertiary); padding: 1rem; border-radius: 8px; text-align: center;">
+                    <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">${s.icon}</div>
+                    <div style="font-weight: 600; margin-bottom: 0.5rem;">${s.label}</div>
+                    <div style="font-size: 0.8rem; color: var(--text-secondary);">
+                        <span style="color: var(--accent-primary);">${s.current}</span> +
+                        <span style="color: var(--accent-warning);">${s.incoming}</span>
+                        ${s.new > 0 ? `<br><span style="color: var(--accent-success);">+${s.new} new</span>` : ''}
+                        ${s.extra ? `<br><span style="color: var(--text-muted); font-size: 0.7rem;">${s.extra}</span>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function quickMerge() {
+            const incomingText = document.getElementById('mergeIncomingInput').value;
+            if (!incomingText) {
+                showToast('No incoming configuration to merge', 'error');
+                return;
+            }
+
+            try {
+                const incoming = JSON.parse(incomingText);
+                const currentType = detectConfigType(state.currentConfig);
+                const incomingType = detectConfigType(incoming);
+
+                let merged;
+                const smartMergeTypes = ['app-export', 'rappid'];
+
+                if (smartMergeTypes.includes(currentType) || smartMergeTypes.includes(incomingType)) {
+                    // Use smart merge for app exports and RAPPID configs
+                    merged = smartMergeAppExport(
+                        state.currentConfig || {},
+                        incoming,
+                        state.mergeOptions
+                    );
+
+                    // Custom message for RAPPID
+                    if (currentType === 'rappid' || incomingType === 'rappid') {
+                        const endpointCount = Object.keys(merged.endpoints || {}).length;
+                        const activeEndpoint = Object.values(merged.endpoints || {}).find(e => e.active);
+                        showToast(`RAPPID merge complete! ${endpointCount} endpoints. Active: ${activeEndpoint?.name || 'none'}`, 'success');
+                    } else {
+                        showToast('Smart merge completed! Endpoints, users, and chats combined.', 'success');
+                    }
+                } else {
+                    // Simple merge for other configs
+                    merged = { ...deepClone(state.currentConfig || {}), ...deepClone(incoming) };
+                    showToast('Simple merge completed!', 'success');
+                }
+
+                state.mergedConfig = merged;
+                previewMergeResult(merged);
+
+            } catch (err) {
+                showToast('Merge failed: ' + err.message, 'error');
+            }
+        }
+
+        function previewMergeResult(merged) {
+            const mergedType = detectConfigType(merged);
+            const activeEndpoint = Object.values(merged.endpoints || {}).find(e => e.active);
+
+            showModal(
+                mergedType === 'rappid' ? 'RAPPID Merge Preview' : 'Merge Preview',
+                `
+                ${mergedType === 'rappid' ? `
+                    <div style="background: linear-gradient(135deg, rgba(255, 170, 0, 0.1), rgba(123, 44, 191, 0.1)); padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 3px solid var(--accent-warning);">
+                        <strong style="color: var(--accent-warning);">&#9889; RAPPID Settings Backup</strong>
+                        <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem;">
+                            Active Endpoint: <strong>${activeEndpoint?.name || 'None'}</strong>
+                            ${merged.azureRegion ? ` | Region: <strong>${merged.azureRegion}</strong>` : ''}
+                            ${merged.ttsVoiceName ? ` | Voice: <strong>${merged.ttsVoiceName}</strong>` : ''}
+                        </div>
+                    </div>
+                ` : ''}
+                <div style="margin-bottom: 1rem;">
+                    <strong>Merged Configuration:</strong>
+                </div>
+                <pre style="max-height: 350px; overflow: auto; background: var(--bg-tertiary); padding: 1rem; border-radius: 8px; font-size: 0.8rem;">${JSON.stringify(merged, null, 2)}</pre>
+                <div style="margin-top: 1rem; padding: 1rem; background: var(--bg-tertiary); border-radius: 8px;">
+                    <strong>Summary:</strong>
+                    <ul style="margin: 0.5rem 0 0 1.5rem; color: var(--text-secondary);">
+                        ${merged.endpoints ? `<li>&#127760; Endpoints: ${Object.keys(merged.endpoints).length}${activeEndpoint ? ` (Active: ${activeEndpoint.name})` : ''}</li>` : ''}
+                        ${merged.users ? `<li>&#128100; Users: ${Object.keys(merged.users).length}</li>` : ''}
+                        ${merged.chats ? `<li>&#128172; Chats: ${Object.values(merged.chats).reduce((sum, c) => sum + Object.keys(c || {}).length, 0)}</li>` : ''}
+                        ${merged.settings ? `<li>&#9881; Settings: ${Object.keys(merged.settings).length}</li>` : ''}
+                        ${merged.azureTTSKey ? `<li>&#128266; TTS: Configured (${merged.ttsVoiceName || 'default'})</li>` : ''}
+                        ${merged.azureRegion ? `<li>&#127757; Region: ${merged.azureRegion}</li>` : ''}
+                        ${merged.Values ? `<li>&#9881; Values: ${Object.keys(merged.Values).length}</li>` : ''}
+                    </ul>
+                </div>
+                `,
+                () => {
+                    applyMerge();
+                    closeModal();
+                }
+            );
+        }
+
+        function renderConflicts() {
+            const container = document.getElementById('conflictsList');
+            const countBadge = document.getElementById('conflictCount');
+
+            countBadge.textContent = state.conflicts.length;
+
+            if (state.conflicts.length === 0) {
+                container.innerHTML = `
+                    <p style="color: var(--accent-success); text-align: center; padding: 2rem;">
+                        &#9989; No conflicts! Configurations are compatible.
+                    </p>
+                `;
+                return;
+            }
+
+            // Group conflicts by top-level section
+            const grouped = {};
+            state.conflicts.forEach((conflict, index) => {
+                const topLevel = conflict.path.split('.')[0];
+                if (!grouped[topLevel]) grouped[topLevel] = [];
+                grouped[topLevel].push({ ...conflict, index });
+            });
+
+            // Section icons
+            const sectionIcons = {
+                endpoints: '&#127760;',
+                users: '&#128100;',
+                chats: '&#128172;',
+                settings: '&#9881;',
+                Values: '&#9881;',
+                azureTTSKey: '&#128266;',
+                azureRegion: '&#127757;',
+                ttsVoiceName: '&#128266;',
+                rappid: '&#9889;',
+                backupType: '&#128196;',
+                exportDate: '&#128197;',
+                version: '&#128196;'
+            };
+
+            container.innerHTML = Object.entries(grouped).map(([section, conflicts]) => `
+                <div class="conflict-section" style="margin-bottom: 1.5rem;">
+                    <div style="font-weight: 600; margin-bottom: 0.75rem; padding: 0.5rem; background: var(--bg-tertiary); border-radius: 6px;">
+                        ${sectionIcons[section] || '&#128196;'} ${section}
+                        <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 0.5rem;">(${conflicts.length} differences)</span>
+                    </div>
+                    ${conflicts.slice(0, 20).map(conflict => `
+                        <div class="conflict-item ${conflict.type === 'added' ? 'diff-added' : conflict.type === 'removed' ? 'diff-removed' : 'diff-modified'}" style="margin-left: 1rem;">
+                            <div class="conflict-key">
+                                <span>${conflict.type === 'added' ? '&#10133;' : conflict.type === 'removed' ? '&#10134;' : '&#9998;'}</span>
+                                <code style="font-size: 0.8rem;">${conflict.path}</code>
+                                <span style="font-size: 0.75rem; color: var(--text-muted); margin-left: 0.5rem;">${conflict.type}</span>
+                            </div>
+                            <div class="conflict-values">
+                                <div class="conflict-value current">
+                                    <strong style="color: var(--accent-primary); font-size: 0.75rem;">Current:</strong><br>
+                                    ${formatConflictValue(conflict.current)}
+                                </div>
+                                <div class="conflict-value incoming">
+                                    <strong style="color: var(--accent-warning); font-size: 0.75rem;">Incoming:</strong><br>
+                                    ${formatConflictValue(conflict.incoming)}
+                                </div>
+                            </div>
+                            <div class="conflict-actions">
+                                <button class="btn ${conflict.resolution === 'current' ? 'btn-primary' : 'btn-secondary'}"
+                                        onclick="resolveConflict(${conflict.index}, 'current')">
+                                    Keep Current
+                                </button>
+                                <button class="btn ${conflict.resolution === 'incoming' ? 'btn-warning' : 'btn-secondary'}"
+                                        onclick="resolveConflict(${conflict.index}, 'incoming')">
+                                    Use Incoming
+                                </button>
+                            </div>
+                        </div>
+                    `).join('')}
+                    ${conflicts.length > 20 ? `
+                        <div style="text-align: center; padding: 0.75rem; color: var(--text-muted); font-size: 0.85rem;">
+                            ... and ${conflicts.length - 20} more differences in ${section}
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+
+        function formatConflictValue(value) {
+            if (value === undefined) {
+                return '<em style="color: var(--text-muted);">undefined</em>';
+            }
+            if (value === null) {
+                return '<em style="color: var(--text-muted);">null</em>';
+            }
+            if (typeof value === 'object') {
+                const str = JSON.stringify(value, null, 2);
+                if (str.length > 200) {
+                    return `<pre style="margin: 0; font-size: 0.75rem; max-height: 100px; overflow: auto;">${escapeHtml(str.substring(0, 200))}...</pre>`;
+                }
+                return `<pre style="margin: 0; font-size: 0.75rem; max-height: 100px; overflow: auto;">${escapeHtml(str)}</pre>`;
+            }
+            const strVal = String(value);
+            if (strVal.length > 100) {
+                return escapeHtml(strVal.substring(0, 100)) + '...';
+            }
+            return escapeHtml(strVal);
+        }
+
+        function resolveConflict(index, resolution) {
+            state.conflicts[index].resolution = resolution;
+            renderConflicts();
+        }
+
+        function previewMerge() {
+            const incomingText = document.getElementById('mergeIncomingInput').value;
+            if (!incomingText) {
+                showToast('No incoming configuration to preview', 'error');
+                return;
+            }
+
+            try {
+                const incoming = JSON.parse(incomingText);
+                const currentType = detectConfigType(state.currentConfig);
+                const incomingType = detectConfigType(incoming);
+
+                let merged;
+
+                // Use smart merge for app-export and RAPPID configs
+                const smartMergeTypes = ['app-export', 'rappid'];
+                if (smartMergeTypes.includes(currentType) || smartMergeTypes.includes(incomingType)) {
+                    merged = smartMergeAppExport(
+                        state.currentConfig || {},
+                        incoming,
+                        state.mergeOptions
+                    );
+                } else {
+                    // Manual conflict resolution for simple configs
+                    const strategy = document.getElementById('mergeStrategy').value;
+                    merged = deepClone(state.currentConfig || {});
+
+                    for (const conflict of state.conflicts) {
+                        let useIncoming = false;
+
+                        if (conflict.resolution) {
+                            useIncoming = conflict.resolution === 'incoming';
+                        } else if (strategy === 'incoming') {
+                            useIncoming = true;
+                        } else if (strategy === 'current') {
+                            useIncoming = false;
+                        } else {
+                            // Manual - skip unresolved
+                            continue;
+                        }
+
+                        if (useIncoming) {
+                            if (conflict.incoming === undefined) {
+                                deleteAtPath(merged, conflict.path);
+                            } else {
+                                setValueAtPath(merged, conflict.path, conflict.incoming);
+                            }
+                        }
+                    }
+                }
+
+                state.mergedConfig = merged;
+                previewMergeResult(merged);
+
+            } catch (err) {
+                showToast('Preview failed: ' + err.message, 'error');
+            }
+        }
+
+        function applyMerge() {
+            if (!state.mergedConfig) {
+                previewMerge();
+                if (!state.mergedConfig) return;
+            }
+
+            state.currentConfig = state.mergedConfig;
+            document.getElementById('currentConfigEditor').value = JSON.stringify(state.mergedConfig, null, 2);
+            document.getElementById('quickConfigPreview').textContent = JSON.stringify(state.mergedConfig, null, 2);
+
+            addToHistory('merge', `Merged configuration (${state.conflicts.length} conflicts resolved)`);
+
+            // Clear merge state
+            state.mergedConfig = null;
+            state.conflicts = [];
+            document.getElementById('mergeIncomingInput').value = '';
+            renderConflicts();
+
+            showToast('Configuration merged successfully', 'success');
+            switchSection('current');
+        }
+
+        // ============================================================================
+        // Agents & Workflows
+        // ============================================================================
+
+        function loadAgents() {
+            const agents = [
+                { name: 'BasicAgent', file: 'basic_agent.py', enabled: true },
+                { name: 'ContextMemoryAgent', file: 'context_memory_agent.py', enabled: true },
+                { name: 'ManageMemoryAgent', file: 'manage_memory_agent.py', enabled: true },
+                { name: 'IQBoosterAgent', file: 'iq_booster_agent.py', enabled: true },
+                { name: 'WorkflowRunnerAgent', file: 'workflow_runner_agent.py', enabled: true },
+                { name: 'GithubAgentLibraryManager', file: 'github_agent_library_manager.py', enabled: true },
+                { name: 'ScriptedDemoAgent', file: 'scripted_demo_agent.py', enabled: true }
+            ];
+
+            const container = document.getElementById('agentsList');
+            container.innerHTML = agents.map(agent => `
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 1rem; background: var(--bg-tertiary); border-radius: 8px;">
+                    <div>
+                        <strong>${agent.name}</strong>
+                        <div style="font-size: 0.85rem; color: var(--text-muted);">${agent.file}</div>
+                    </div>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" ${agent.enabled ? 'checked' : ''}>
+                        Enabled
+                    </label>
+                </div>
+            `).join('');
+        }
+
+        function loadWorkflows() {
+            const workflows = [
+                { name: 'IQ Boost Workflow', file: 'iq_boost_workflow.json', version: '1.0', steps: 8 }
+            ];
+
+            const container = document.getElementById('workflowsList');
+            container.innerHTML = workflows.map(wf => `
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 1rem; background: var(--bg-tertiary); border-radius: 8px; margin-bottom: 0.75rem;">
+                    <div>
+                        <strong>${wf.name}</strong>
+                        <div style="font-size: 0.85rem; color: var(--text-muted);">${wf.file} | v${wf.version} | ${wf.steps} steps</div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-secondary" style="padding: 0.5rem 0.75rem; font-size: 0.8rem;">View</button>
+                        <button class="btn btn-primary" style="padding: 0.5rem 0.75rem; font-size: 0.8rem;">Run</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ============================================================================
+        // History
+        // ============================================================================
+
+        function addToHistory(type, description) {
+            state.history.unshift({
+                id: Date.now(),
+                type,
+                description,
+                timestamp: new Date().toISOString()
+            });
+
+            // Keep only last 50 items
+            state.history = state.history.slice(0, 50);
+
+            saveToLocalStorage();
+            updateDashboard();
+        }
+
+        function renderHistory() {
+            const container = document.getElementById('historyList');
+
+            if (state.history.length === 0) {
+                container.innerHTML = `
+                    <li style="padding: 2rem; text-align: center; color: var(--text-muted);">
+                        No history yet
+                    </li>
+                `;
+                return;
+            }
+
+            const icons = {
+                save: '&#128190;',
+                import: '&#128229;',
+                export: '&#128228;',
+                merge: '&#128279;',
+                backup: '&#128451;'
+            };
+
+            container.innerHTML = state.history.map(item => `
+                <li class="history-item">
+                    <div class="history-icon">${icons[item.type] || '&#128196;'}</div>
+                    <div class="history-info">
+                        <div class="history-title">${item.description}</div>
+                        <div class="history-meta">${new Date(item.timestamp).toLocaleString()}</div>
+                    </div>
+                </li>
+            `).join('');
+        }
+
+        // ============================================================================
+        // Endpoints
+        // ============================================================================
+
+        function saveEndpoints() {
+            state.endpoints = {
+                local: document.getElementById('localEndpoint').value,
+                production: document.getElementById('prodEndpoint').value,
+                functionKey: document.getElementById('functionKey').value,
+                active: document.getElementById('activeEnv').value
+            };
+
+            saveToLocalStorage();
+            showToast('Endpoint settings saved', 'success');
+        }
+
+        // ============================================================================
+        // Dashboard
+        // ============================================================================
+
+        function updateDashboard() {
+            const config = state.currentConfig;
+            const type = detectConfigType(config);
+
+            if (type === 'app-export' || type === 'rappid') {
+                const endpointCount = config.endpoints ? Object.keys(config.endpoints).length : 0;
+                const userCount = config.users ? Object.keys(config.users).length : 0;
+                const chatCount = config.chats ?
+                    Object.values(config.chats).reduce((sum, uc) => sum + Object.keys(uc).length, 0) : 0;
+                const settingCount = config.settings ? Object.keys(config.settings).length : 0;
+
+                document.getElementById('statSettings').textContent = endpointCount;
+                document.getElementById('statAgents').textContent = userCount;
+                document.getElementById('statWorkflows').textContent = chatCount;
+                document.getElementById('statHistory').textContent = state.history.length;
+
+                // Update labels dynamically
+                document.querySelector('#statSettings').nextElementSibling.textContent = 'Endpoints';
+                document.querySelector('#statAgents').nextElementSibling.textContent = 'Users';
+                document.querySelector('#statWorkflows').nextElementSibling.textContent = 'Chats';
+            } else {
+                const settings = config?.Values ? Object.keys(config.Values).length : 0;
+                document.getElementById('statSettings').textContent = settings;
+                document.getElementById('statAgents').textContent = '7';
+                document.getElementById('statWorkflows').textContent = '1';
+                document.getElementById('statHistory').textContent = state.history.length;
+
+                // Reset labels
+                document.querySelector('#statSettings').nextElementSibling.textContent = 'Config Settings';
+                document.querySelector('#statAgents').nextElementSibling.textContent = 'Agents Loaded';
+                document.querySelector('#statWorkflows').nextElementSibling.textContent = 'Workflows';
+            }
+
+            // Update quick config preview
+            if (config) {
+                document.getElementById('quickConfigPreview').textContent = JSON.stringify(config, null, 2);
+            }
+        }
+
+        // ============================================================================
+        // Utilities
+        // ============================================================================
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <span>${type === 'success' ? '&#9989;' : type === 'error' ? '&#10060;' : '&#9888;'}</span>
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = 'slideIn 0.3s ease reverse';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function showModal(title, content, onConfirm) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalBody').innerHTML = content;
+            document.getElementById('modalOverlay').classList.add('active');
+
+            window.modalConfirmCallback = onConfirm;
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('active');
+        }
+
+        function confirmModal() {
+            if (window.modalConfirmCallback) {
+                window.modalConfirmCallback();
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function downloadJSON(data, filename) {
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Update export preview when options change
+        document.getElementById('exportFormat')?.addEventListener('change', updateExportPreview);
+        document.getElementById('exportSettings')?.addEventListener('change', updateExportPreview);
+        document.getElementById('exportSecrets')?.addEventListener('change', updateExportPreview);
+
+        // Analyze conflicts when incoming config changes
+        document.getElementById('mergeIncomingInput')?.addEventListener('input', debounce(analyzeConflicts, 500));
+
+        function debounce(fn, delay) {
+            let timeout;
+            return (...args) => {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => fn(...args), delay);
+            };
+        }
+    </script>
+</body>
+</html>

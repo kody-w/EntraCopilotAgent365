@@ -1,0 +1,170 @@
+================================================================================
+COPILOT AGENT 365 - 10 DEMO PROMPTS FOR AUTOMATION & SELF-MANAGEMENT
+================================================================================
+
+CREATED: December 4, 2025
+STRATEGY: Show the system managing itself end-to-end
+FOCUS: Zero manual work, maximum automation
+
+================================================================================
+THE 10 DEMO PROMPTS (Quick Summary)
+================================================================================
+
+1. "Boost my AI to the latest model"
+   [Automation: IQ Booster discovers models, deploys, updates local+cloud configs]
+
+2. "Set up my agent library with sales team capabilities"
+   [Automation: GitHub Library Manager discovers 65+ agents, installs to storage, creates group]
+
+3. "Run our deployment workflow automatically"
+   [Automation: Workflow Runner executes JSON transcript, variable substitution, error handling]
+
+4. "Discover what Azure OpenAI resources I have and what models are available"
+   [Automation: IQ Booster scans subscription, lists resources, shows quotas, gives recommendations]
+
+5. "Install a custom email agent and enable it just for my team"
+   [Automation: Library Manager finds agent, downloads code, installs, creates user group]
+
+6. "Check my current AI configuration and fix any issues automatically"
+   [Automation: IQ Booster validates configs, fixes mismatches, reports all changes]
+
+7. "Update all my configuration values to use the new Azure endpoint"
+   [Automation: IQ Booster discovers new endpoint, updates prod+dev, restarts function]
+
+8. "Run a workflow to deploy my latest agents and test them"
+   [Automation: Workflow Runner executes multi-step deployment, captures test results, error handlers]
+
+9. "Install all agents from the manufacturing vertical and organize them by category"
+   [Automation: Library Manager searches category, installs agents, creates organized groups]
+
+10. "Validate and optimize my entire AI infrastructure configuration"
+    [Automation: IQ Booster runs comprehensive audit, suggests optimizations, updates parameters]
+
+================================================================================
+KEY AUTOMATION PATTERNS DEMONSTRATED
+================================================================================
+
+PATTERN 1: DISCOVERY & AUTO-CONFIGURATION (Prompts 1, 4, 6)
+- IQ Booster auto-scans Azure resources
+- Zero Azure portal navigation
+- Auto-applies changes to local + cloud environments
+
+PATTERN 2: LIBRARY MANAGEMENT & INSTALLATION (Prompts 2, 5, 9)
+- GitHub Library Manager discovers agents from public repository
+- Zero manual downloading
+- Auto-registers as callable functions
+
+PATTERN 3: WORKFLOW ORCHESTRATION & EXECUTION (Prompts 3, 8, 10)
+- Workflow Runner reads JSON transcripts
+- Zero manual step execution
+- Auto-error handling with fallback logic
+
+PATTERN 4: CROSS-AGENT COORDINATION (All Prompts)
+- Multiple agents collaborate without user intervention
+- Zero manual agent-to-agent communication
+- Auto-feedback loops between agent outputs
+
+================================================================================
+BUSINESS IMPACT: MANUAL WORK ELIMINATED
+================================================================================
+
+Resource Discovery          → IQ Booster auto-scans subscriptions
+Azure Portal Navigation     → System finds all resources programmatically
+Configuration File Editing  → IQ Booster updates local + cloud configs automatically
+Agent Installation          → Library Manager downloads + installs in one call
+Deployment Scripts          → Workflow Runner executes JSON with variable substitution
+Testing & Validation        → Workflows include built-in test steps
+Infrastructure Audits       → IQ Booster runs diagnostic checks automatically
+Agent Lifecycle Management  → Library Manager handles versioning, groups, access control
+Production Updates          → Configuration changes apply immediately without restarts
+Documentation Sync          → System auto-logs all changes to memory
+
+================================================================================
+RECOMMENDED DEMO FLOW (For Maximum Impact)
+================================================================================
+
+SEQUENCE FOR DEMOS:
+
+1. Discovery (Prompt 4)          → Show system "seeing" Azure resources
+2. Auto-Configuration (Prompt 1) → Show model upgrade automatically
+3. Library Management (Prompt 2) → Show agent installation from GitHub
+4. Workflow Execution (Prompt 3) → Show orchestration of complex processes
+5. Comprehensive Audit (Prompt 10) → Show system validating its own config
+
+NARRATIVE: Discovery → Configuration → Integration → Orchestration → Validation
+
+================================================================================
+CORE AGENT CAPABILITIES
+================================================================================
+
+IQ BOOSTER AGENT:
+- Discovers Azure OpenAI resources across subscriptions
+- Lists available models without manual lookup
+- Provisions new deployments without Azure portal
+- Updates Azure Function App settings (production)
+- Modifies local.settings.json (development)
+- Validates configurations end-to-end
+- Suggests model optimizations
+- Auto-detects and fixes configuration mismatches
+
+WORKFLOW RUNNER AGENT:
+- Parses JSON workflow transcripts
+- Variable substitution at runtime
+- Multi-step sequence execution with output chaining
+- Captures step outputs as variables
+- Conditional logic (if/then/else)
+- Error handling with on_error blocks
+- Foreach loops for bulk operations
+- Dry-run mode for previewing changes
+
+GITHUB AGENT LIBRARY MANAGER:
+- Discovers all 65+ agents in public repository
+- Searches agents by keyword, name, features
+- Filters by industry vertical/category
+- Downloads code directly from GitHub
+- Installs to Azure File Storage
+- Creates GUID-based agent groups
+- Manages versioning and updates
+- Tracks installation history
+
+================================================================================
+KEY MESSAGING
+================================================================================
+
+"Copilot Agent 365 automates the entire AI infrastructure lifecycle. Your 
+agents discover resources, configure themselves, run workflows, and manage 
+their own library of capabilities. What used to take hours of manual Azure 
+portal clicks and script editing now happens in seconds."
+
+TAGLINE: Zero Manual Configuration. Zero Manual Deployment. Zero Manual 
+         Infrastructure Management.
+
+================================================================================
+TECHNICAL FOUNDATION
+================================================================================
+
+All automation builds on three core agents that orchestrate together:
+
+1. IQ BOOSTER → Discovers & configures Azure resources
+2. WORKFLOW RUNNER → Orchestrates complex multi-step processes
+3. GITHUB AGENT LIBRARY → Manages agent lifecycle from public repository
+
+Combined with:
+- Azure OpenAI (GPT-4o) for intelligent routing
+- Azure File Storage for persistent memory
+- Azure Functions for serverless execution
+- Power Automate (optional) for enterprise integration
+
+RESULT: A self-managing AI system that requires zero manual intervention
+
+================================================================================
+FILE LOCATION
+================================================================================
+
+Full detailed demo prompts with explanations:
+/Users/kodywildfeuer/Documents/RappAI/EntraCopilotAgent365/DEMO_PROMPTS.md
+
+This summary:
+/Users/kodywildfeuer/Documents/RappAI/EntraCopilotAgent365/DEMO_PROMPTS_SUMMARY.txt
+
+================================================================================

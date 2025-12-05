@@ -1,0 +1,187 @@
+{
+  "name": "IQ Boost Workflow",
+  "description": "Automatically discover, deploy, and configure the best Azure OpenAI model",
+  "version": "1.0",
+  "author": "IQBoosterAgent",
+  "created": "2025-12-05",
+
+  "variables": {
+    "function_app_name": {
+      "type": "string",
+      "default": "copilot365-4ovzneuimhd2g",
+      "description": "Azure Function App to configure"
+    },
+    "resource_group": {
+      "type": "string",
+      "default": "rappai",
+      "description": "Azure resource group"
+    },
+    "model_priority": {
+      "type": "array",
+      "default": ["gpt-5-chat", "gpt-5", "gpt-4o", "gpt-4-turbo", "gpt-4", "gpt-35-turbo"],
+      "description": "Model preference order (best first)"
+    },
+    "local_settings_path": {
+      "type": "string",
+      "default": "local.settings.json",
+      "description": "Path to local settings file"
+    }
+  },
+
+  "steps": [
+    {
+      "id": "check_azure_cli",
+      "name": "Verify Azure CLI Login",
+      "description": "Ensure user is authenticated with Azure CLI",
+      "action": "az_command",
+      "command": "az account show --query '{name:name, user:user.name, subscription:id}' -o json",
+      "outputs": {
+        "subscription_name": "$.name",
+        "user_email": "$.user",
+        "subscription_id": "$.subscription"
+      },
+      "on_error": {
+        "message": "Not logged in to Azure CLI. Run 'az login' first.",
+        "abort": true
+      }
+    },
+
+    {
+      "id": "discover_resources",
+      "name": "Discover Azure OpenAI Resources",
+      "description": "Find all Azure OpenAI resources in the subscription",
+      "action": "az_command",
+      "command": "az cognitiveservices account list --query \"[?kind=='OpenAI'].{name:name, location:location, resourceGroup:resourceGroup, endpoint:properties.endpoint}\" -o json",
+      "outputs": {
+        "resources": "$",
+        "resource_count": "$.length"
+      },
+      "on_error": {
+        "message": "Failed to list OpenAI resources",
+        "abort": true
+      },
+      "validation": {
+        "condition": "${resource_count} > 0",
+        "error_message": "No Azure OpenAI resources found in subscription"
+      }
+    },
+
+    {
+      "id": "scan_deployments",
+      "name": "Scan All Deployments",
+      "description": "Check deployments in each OpenAI resource to find the best model",
+      "action": "foreach",
+      "collection": "${discover_resources.resources}",
+      "as": "resource",
+      "steps": [
+        {
+          "id": "list_resource_deployments",
+          "action": "az_command",
+          "command": "az cognitiveservices account deployment list --name ${resource.name} --resource-group ${resource.resourceGroup} -o json",
+          "outputs": {
+            "deployments": "$"
+          },
+          "continue_on_error": true
+        }
+      ],
+      "outputs": {
+        "all_deployments": "$.flatten()"
+      }
+    },
+
+    {
+      "id": "find_best_model",
+      "name": "Find Best Available Model",
+      "description": "Select the highest-priority model from discovered deployments",
+      "action": "evaluate",
+      "logic": {
+        "type": "priority_match",
+        "source": "${scan_deployments.all_deployments}",
+        "match_field": "properties.model.name",
+        "priorities": "${model_priority}",
+        "select_fields": ["name", "properties.model.name", "resource_name", "resource_group", "endpoint"]
+      },
+      "outputs": {
+        "best_deployment_name": "$.name",
+        "best_model_name": "$.properties.model.name",
+        "best_resource_name": "$.resource_name",
+        "best_resource_group": "$.resource_group",
+        "best_endpoint": "$.endpoint"
+      },
+      "on_error": {
+        "message": "No suitable model deployment found",
+        "abort": true
+      }
+    },
+
+    {
+      "id": "get_api_key",
+      "name": "Retrieve API Key",
+      "description": "Get the API key for the selected OpenAI resource",
+      "action": "az_command",
+      "command": "az cognitiveservices account keys list --name ${find_best_model.best_resource_name} --resource-group ${find_best_model.best_resource_group} --query 'key1' -o tsv",
+      "outputs": {
+        "api_key": "$"
+      },
+      "sensitive": true,
+      "on_error": {
+        "message": "Failed to retrieve API key",
+        "abort": true
+      }
+    },
+
+    {
+      "id": "update_local_settings",
+      "name": "Update Local Settings",
+      "description": "Write new configuration to local.settings.json",
+      "action": "update_json_file",
+      "file_path": "${local_settings_path}",
+      "updates": {
+        "Values.AZURE_OPENAI_ENDPOINT": "${find_best_model.best_endpoint}",
+        "Values.AZURE_OPENAI_DEPLOYMENT_NAME": "${find_best_model.best_deployment_name}",
+        "Values.AZURE_OPENAI_API_KEY": "${get_api_key.api_key}"
+      },
+      "outputs": {
+        "local_updated": true,
+        "previous_endpoint": "$.Values.AZURE_OPENAI_ENDPOINT",
+        "previous_deployment": "$.Values.AZURE_OPENAI_DEPLOYMENT_NAME"
+      }
+    },
+
+    {
+      "id": "update_azure_function",
+      "name": "Update Azure Function App",
+      "description": "Apply new configuration to the production Azure Function",
+      "action": "az_command",
+      "command": "az functionapp config appsettings set --name ${function_app_name} --resource-group ${resource_group} --settings AZURE_OPENAI_ENDPOINT=${find_best_model.best_endpoint} AZURE_OPENAI_DEPLOYMENT_NAME=${find_best_model.best_deployment_name} AZURE_OPENAI_API_KEY=${get_api_key.api_key} -o none",
+      "outputs": {
+        "azure_updated": true
+      },
+      "on_error": {
+        "message": "Failed to update Azure Function App settings",
+        "abort": false
+      }
+    },
+
+    {
+      "id": "generate_report",
+      "name": "Generate Summary Report",
+      "description": "Create a summary of all changes made",
+      "action": "template",
+      "template": "## 🎉 IQ Boost Complete!\n\n### Model Upgrade\n| Setting | Previous | New |\n|---------|----------|-----|\n| Endpoint | ${update_local_settings.previous_endpoint} | ${find_best_model.best_endpoint} |\n| Deployment | ${update_local_settings.previous_deployment} | ${find_best_model.best_deployment_name} |\n| Model | - | ${find_best_model.best_model_name} |\n\n### Updates Applied\n- ✅ local.settings.json\n- ${update_azure_function.azure_updated ? '✅' : '⚠️'} Azure Function App (${function_app_name})\n\n### Details\n- **Subscription:** ${check_azure_cli.subscription_name}\n- **Resource:** ${find_best_model.best_resource_name}\n- **Location:** ${find_best_model.best_resource_group}\n\n🧠 Your AI has been upgraded to **${find_best_model.best_model_name}**!",
+      "outputs": {
+        "report": "$"
+      }
+    }
+  ],
+
+  "on_complete": {
+    "action": "return",
+    "value": "${generate_report.report}"
+  },
+
+  "on_error": {
+    "action": "return",
+    "value": "❌ Workflow failed: ${error.message}\n\nStep: ${error.step}\nDetails: ${error.details}"
+  }
+}
