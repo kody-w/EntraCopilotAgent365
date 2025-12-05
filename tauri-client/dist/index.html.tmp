@@ -2,6 +2,9 @@
 <html lang="en">
 
 <head>
+  <!-- Tauri Desktop Client Enhancements -->
+  <link rel="stylesheet" href="desktop-styles.css" />
+  <script src="tauri-bridge.js" defer></script>
   <meta charset="UTF-8" />
   <!-- Cycle 26: Removed zoom restrictions for accessibility -->
   <meta name="viewport"
@@ -8007,11 +8010,9 @@
         this.ambientInterval = null;
         this.ambientEnabled = true; // Can be toggled in settings
         this.ambientStep = 0;
-        // Focus hum for listening mode (brain.fm style)
-        this.focusHumNodes = null;
-        this.focusHumGain = null;
-        this.focusLFO = null;
-        this.isHumming = false;
+        // Listening indicator sounds
+        this.listeningInterval = null;
+        this.listeningStep = 0;
       }
 
       init() {
@@ -8159,177 +8160,70 @@
         });
       }
 
-      // Brain.fm style focus hum - continuous concentration-enhancing drone
-      // Uses layered frequencies with binaural beats and subtle modulation
-      startListeningSound() {
-        if (!this.enabled || !this.ambientEnabled) return;
-        if (this.isHumming) return;
+      // Soft listening pulse - subtle low tone to indicate active listening
+      playListeningPulse() {
+        if (!this.enabled || !this.ambientEnabled || !this.audioContext) return;
 
-        this.init();
-        this.isHumming = true;
+        const now = this.audioContext.currentTime;
 
-        const ctx = this.audioContext;
-        const now = ctx.currentTime;
+        // Alternating gentle tones - soft "breathing" pattern
+        const patterns = [
+          { freq: 220, duration: 0.15 },  // A3 - soft low tone
+          { freq: 247, duration: 0.12 },  // B3 - slight lift
+          { freq: 220, duration: 0.15 },  // A3 - back down
+          { freq: 196, duration: 0.18 },  // G3 - gentle low
+        ];
 
-        // Create stereo panner for binaural effect
-        const merger = ctx.createChannelMerger(2);
+        const pattern = patterns[this.listeningStep % patterns.length];
+        this.listeningStep++;
 
-        // Master gain with smooth fade-in
-        this.focusHumGain = ctx.createGain();
-        this.focusHumGain.gain.setValueAtTime(0, now);
-        this.focusHumGain.gain.linearRampToValueAtTime(0.06, now + 2); // 2 second fade in
-        this.focusHumGain.connect(ctx.destination);
+        const oscillator = this.audioContext.createOscillator();
+        const gainNode = this.audioContext.createGain();
 
-        // LFO for subtle "breathing" amplitude modulation
-        this.focusLFO = ctx.createOscillator();
-        const lfoGain = ctx.createGain();
-        this.focusLFO.frequency.value = 0.1; // Very slow breathing ~6 breaths/min
-        this.focusLFO.type = "sine";
-        lfoGain.gain.value = 0.015; // Subtle modulation depth
-        this.focusLFO.connect(lfoGain);
-        lfoGain.connect(this.focusHumGain.gain);
-        this.focusLFO.start(now);
+        oscillator.connect(gainNode);
+        gainNode.connect(this.audioContext.destination);
 
-        this.focusHumNodes = [];
+        oscillator.frequency.value = pattern.freq;
+        oscillator.type = "sine";
 
-        // Base frequency around 90Hz (deep, grounding)
-        const baseFreq = 90;
+        // Very soft volume - just enough to notice
+        gainNode.gain.setValueAtTime(0, now);
+        gainNode.gain.linearRampToValueAtTime(0.04, now + 0.03);
+        gainNode.gain.linearRampToValueAtTime(0.06, now + pattern.duration / 2);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, now + pattern.duration);
 
-        // Binaural beat at 10Hz (alpha waves - relaxed focus)
-        const binauralOffset = 10;
-
-        // Layer 1: Deep foundation drone (left slightly lower for binaural)
-        const droneLeft = ctx.createOscillator();
-        const droneLeftGain = ctx.createGain();
-        droneLeft.frequency.value = baseFreq;
-        droneLeft.type = "sine";
-        droneLeftGain.gain.value = 0.5;
-        droneLeft.connect(droneLeftGain);
-        droneLeftGain.connect(merger, 0, 0); // Left channel
-        droneLeft.start(now);
-        this.focusHumNodes.push(droneLeft);
-
-        // Layer 1: Deep foundation drone (right slightly higher for binaural)
-        const droneRight = ctx.createOscillator();
-        const droneRightGain = ctx.createGain();
-        droneRight.frequency.value = baseFreq + binauralOffset;
-        droneRight.type = "sine";
-        droneRightGain.gain.value = 0.5;
-        droneRight.connect(droneRightGain);
-        droneRightGain.connect(merger, 0, 1); // Right channel
-        droneRight.start(now);
-        this.focusHumNodes.push(droneRight);
-
-        // Layer 2: Harmonic warmth (perfect fifth above base)
-        const harmonic1 = ctx.createOscillator();
-        const harmonic1Gain = ctx.createGain();
-        harmonic1.frequency.value = baseFreq * 1.5; // 135Hz - fifth
-        harmonic1.type = "sine";
-        harmonic1Gain.gain.value = 0.2;
-        harmonic1.connect(harmonic1Gain);
-        harmonic1Gain.connect(merger, 0, 0);
-        harmonic1Gain.connect(merger, 0, 1);
-        harmonic1.start(now);
-        this.focusHumNodes.push(harmonic1);
-
-        // Layer 3: Higher shimmer (octave + slight detune for richness)
-        const shimmerL = ctx.createOscillator();
-        const shimmerLGain = ctx.createGain();
-        shimmerL.frequency.value = baseFreq * 2 - 0.5; // Slight detune left
-        shimmerL.type = "sine";
-        shimmerLGain.gain.value = 0.1;
-        shimmerL.connect(shimmerLGain);
-        shimmerLGain.connect(merger, 0, 0);
-        shimmerL.start(now);
-        this.focusHumNodes.push(shimmerL);
-
-        const shimmerR = ctx.createOscillator();
-        const shimmerRGain = ctx.createGain();
-        shimmerR.frequency.value = baseFreq * 2 + 0.5; // Slight detune right
-        shimmerR.type = "sine";
-        shimmerRGain.gain.value = 0.1;
-        shimmerR.connect(shimmerRGain);
-        shimmerRGain.connect(merger, 0, 1);
-        shimmerR.start(now);
-        this.focusHumNodes.push(shimmerR);
-
-        // Layer 4: Sub-bass presence (half frequency)
-        const subBass = ctx.createOscillator();
-        const subBassGain = ctx.createGain();
-        subBass.frequency.value = baseFreq * 0.5; // 45Hz sub
-        subBass.type = "sine";
-        subBassGain.gain.value = 0.15;
-        subBass.connect(subBassGain);
-        subBassGain.connect(merger, 0, 0);
-        subBassGain.connect(merger, 0, 1);
-        subBass.start(now);
-        this.focusHumNodes.push(subBass);
-
-        // Layer 5: Gentle pink noise texture (very subtle)
-        const noiseBuffer = ctx.createBuffer(2, ctx.sampleRate * 2, ctx.sampleRate);
-        for (let channel = 0; channel < 2; channel++) {
-          const data = noiseBuffer.getChannelData(channel);
-          let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
-          for (let i = 0; i < noiseBuffer.length; i++) {
-            const white = Math.random() * 2 - 1;
-            // Pink noise filter
-            b0 = 0.99886 * b0 + white * 0.0555179;
-            b1 = 0.99332 * b1 + white * 0.0750759;
-            b2 = 0.96900 * b2 + white * 0.1538520;
-            b3 = 0.86650 * b3 + white * 0.3104856;
-            b4 = 0.55000 * b4 + white * 0.5329522;
-            b5 = -0.7616 * b5 - white * 0.0168980;
-            data[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
-            b6 = white * 0.115926;
-          }
-        }
-
-        const noiseSource = ctx.createBufferSource();
-        const noiseGain = ctx.createGain();
-        const noiseFilter = ctx.createBiquadFilter();
-        noiseSource.buffer = noiseBuffer;
-        noiseSource.loop = true;
-        noiseFilter.type = "lowpass";
-        noiseFilter.frequency.value = 400; // Only keep low frequencies
-        noiseGain.gain.value = 0.03; // Very subtle
-        noiseSource.connect(noiseFilter);
-        noiseFilter.connect(noiseGain);
-        noiseGain.connect(merger, 0, 0);
-        noiseGain.connect(merger, 0, 1);
-        noiseSource.start(now);
-        this.focusHumNodes.push(noiseSource);
-
-        // Connect merger to master gain
-        merger.connect(this.focusHumGain);
+        oscillator.start(now);
+        oscillator.stop(now + pattern.duration);
       }
 
-      // Stop focus hum with smooth fade-out
-      stopListeningSound() {
-        if (!this.isHumming || !this.focusHumGain) return;
+      // Start listening indicator sound - subtle periodic pulse
+      startListeningSound() {
+        if (!this.enabled || !this.ambientEnabled) return;
 
-        const ctx = this.audioContext;
-        const now = ctx.currentTime;
+        // Don't start if already running
+        if (this.listeningInterval) return;
 
-        // Smooth 1 second fade out
-        this.focusHumGain.gain.cancelScheduledValues(now);
-        this.focusHumGain.gain.setValueAtTime(this.focusHumGain.gain.value, now);
-        this.focusHumGain.gain.linearRampToValueAtTime(0, now + 1);
+        this.init();
+        this.listeningStep = 0;
 
-        // Stop all nodes after fade
+        // Play first pulse after 2 seconds
         setTimeout(() => {
-          if (this.focusHumNodes) {
-            this.focusHumNodes.forEach(node => {
-              try { node.stop(); } catch(e) {}
-            });
-            this.focusHumNodes = null;
-          }
-          if (this.focusLFO) {
-            try { this.focusLFO.stop(); } catch(e) {}
-            this.focusLFO = null;
-          }
-          this.focusHumGain = null;
-          this.isHumming = false;
-        }, 1100);
+          if (this.listeningInterval) this.playListeningPulse();
+        }, 2000);
+
+        // Then pulse every 5 seconds - less frequent than processing
+        this.listeningInterval = setInterval(() => {
+          this.playListeningPulse();
+        }, 5000);
+      }
+
+      // Stop listening indicator sound
+      stopListeningSound() {
+        if (this.listeningInterval) {
+          clearInterval(this.listeningInterval);
+          this.listeningInterval = null;
+        }
+        this.listeningStep = 0;
       }
     }
 

@@ -1,0 +1,410 @@
+/**
+ * Desktop-specific styles for Tauri client
+ * These styles enhance the application when running as a desktop app
+ */
+
+/* Desktop window frame adjustments */
+body.tauri-desktop {
+  /* Remove any overscroll indicators on desktop */
+  overscroll-behavior: none;
+
+  /* Better font rendering on desktop */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Custom titlebar area (if using frameless window) */
+.desktop-titlebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 32px;
+  background: linear-gradient(180deg, var(--gray-20) 0%, var(--gray-10) 100%);
+  border-bottom: 1px solid var(--gray-30);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+  z-index: 10000;
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+body.dark .desktop-titlebar {
+  background: linear-gradient(180deg, var(--gray-30) 0%, var(--gray-20) 100%);
+  border-bottom-color: var(--gray-40);
+}
+
+.desktop-titlebar-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--gray-100);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.desktop-titlebar-title img {
+  width: 16px;
+  height: 16px;
+}
+
+.desktop-titlebar-controls {
+  display: flex;
+  gap: 8px;
+  -webkit-app-region: no-drag;
+}
+
+.desktop-titlebar-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gray-70);
+  transition: all 0.15s ease;
+}
+
+.desktop-titlebar-btn:hover {
+  background: var(--gray-30);
+  color: var(--gray-100);
+}
+
+.desktop-titlebar-btn.close:hover {
+  background: #e81123;
+  color: white;
+}
+
+/* Adjust app container when titlebar is present */
+body.tauri-desktop.has-titlebar .app-container {
+  padding-top: 32px;
+}
+
+body.tauri-desktop.has-titlebar .header {
+  top: 32px;
+}
+
+/* Desktop-specific scrollbar styling */
+body.tauri-desktop ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+body.tauri-desktop ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+body.tauri-desktop ::-webkit-scrollbar-thumb {
+  background: var(--gray-40);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+body.tauri-desktop ::-webkit-scrollbar-thumb:hover {
+  background: var(--gray-50);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+body.dark.tauri-desktop ::-webkit-scrollbar-thumb {
+  background: var(--gray-50);
+}
+
+body.dark.tauri-desktop ::-webkit-scrollbar-thumb:hover {
+  background: var(--gray-60);
+}
+
+/* Desktop hover effects - more pronounced on desktop */
+body.tauri-desktop .message-wrapper:hover {
+  transform: translateX(2px);
+}
+
+body.tauri-desktop .fab:hover {
+  transform: scale(1.08);
+}
+
+body.tauri-desktop .menu-item:hover {
+  transform: translateX(6px);
+}
+
+/* Desktop keyboard focus indicators */
+body.tauri-desktop *:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+body.tauri-desktop button:focus-visible,
+body.tauri-desktop input:focus-visible,
+body.tauri-desktop textarea:focus-visible,
+body.tauri-desktop select:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(var(--primary-rgb), 0.15);
+}
+
+/* Desktop context menu styling */
+.desktop-context-menu {
+  position: fixed;
+  background: white;
+  border: 1px solid var(--gray-30);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  padding: 4px;
+  min-width: 160px;
+  z-index: 10001;
+  animation: contextMenuFadeIn 0.15s ease;
+}
+
+body.dark .desktop-context-menu {
+  background: var(--gray-30);
+  border-color: var(--gray-40);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+@keyframes contextMenuFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.desktop-context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--gray-100);
+  transition: background 0.1s ease;
+}
+
+.desktop-context-menu-item:hover {
+  background: rgba(var(--primary-rgb), 0.1);
+}
+
+.desktop-context-menu-item i {
+  width: 16px;
+  text-align: center;
+  color: var(--gray-60);
+}
+
+.desktop-context-menu-divider {
+  height: 1px;
+  background: var(--gray-30);
+  margin: 4px 0;
+}
+
+body.dark .desktop-context-menu-divider {
+  background: var(--gray-40);
+}
+
+/* Desktop drag-drop zone */
+body.tauri-desktop .drag-drop-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(var(--primary-rgb), 0.1);
+  border: 3px dashed var(--primary);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+body.tauri-desktop .drag-drop-overlay.active {
+  display: flex;
+}
+
+body.tauri-desktop .drag-drop-overlay-content {
+  background: white;
+  padding: 32px 48px;
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: var(--shadow-large);
+}
+
+body.dark.tauri-desktop .drag-drop-overlay-content {
+  background: var(--gray-30);
+}
+
+body.tauri-desktop .drag-drop-overlay-content i {
+  font-size: 48px;
+  color: var(--primary);
+  margin-bottom: 16px;
+}
+
+body.tauri-desktop .drag-drop-overlay-content h3 {
+  font-size: 18px;
+  color: var(--gray-100);
+  margin-bottom: 8px;
+}
+
+body.tauri-desktop .drag-drop-overlay-content p {
+  font-size: 14px;
+  color: var(--gray-60);
+}
+
+/* Desktop status indicator */
+.desktop-status-indicator {
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: white;
+  border: 1px solid var(--gray-30);
+  border-radius: 20px;
+  font-size: 11px;
+  color: var(--gray-60);
+  box-shadow: var(--shadow-small);
+  z-index: 100;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.2s ease;
+}
+
+body.dark .desktop-status-indicator {
+  background: var(--gray-30);
+  border-color: var(--gray-40);
+}
+
+.desktop-status-indicator.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.desktop-status-indicator .status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success);
+}
+
+.desktop-status-indicator .status-dot.offline {
+  background: var(--error);
+}
+
+.desktop-status-indicator .status-dot.connecting {
+  background: var(--warning);
+  animation: pulse 1s infinite;
+}
+
+/* Desktop keyboard shortcut hints */
+.keyboard-hint {
+  display: none;
+  font-size: 10px;
+  padding: 2px 5px;
+  background: var(--gray-30);
+  border-radius: 3px;
+  color: var(--gray-70);
+  font-family: 'SF Mono', Monaco, monospace;
+  margin-left: 8px;
+}
+
+body.tauri-desktop .keyboard-hint {
+  display: inline-block;
+}
+
+/* Desktop window state transitions */
+body.tauri-desktop {
+  transition: opacity 0.2s ease;
+}
+
+body.tauri-desktop.window-blur {
+  opacity: 0.97;
+}
+
+/* Desktop tray menu badge */
+.tray-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 18px;
+  height: 18px;
+  background: var(--error);
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 700;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+}
+
+body.dark .tray-badge {
+  border-color: var(--gray-20);
+}
+
+/* Desktop tooltip improvements */
+body.tauri-desktop [data-tooltip]:hover::after {
+  transition-delay: 0.3s;
+}
+
+/* Print styles for desktop export */
+@media print {
+  body.tauri-desktop .header,
+  body.tauri-desktop .sidebar,
+  body.tauri-desktop .float-buttons,
+  body.tauri-desktop .input-container,
+  body.tauri-desktop .desktop-titlebar {
+    display: none !important;
+  }
+
+  body.tauri-desktop .chat-container {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  body.tauri-desktop .chat-messages {
+    height: auto !important;
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+
+  body.tauri-desktop .message-wrapper {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
+
+/* High DPI display adjustments */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  body.tauri-desktop {
+    -webkit-font-smoothing: subpixel-antialiased;
+  }
+}
+
+/* macOS specific */
+body.tauri-desktop.platform-macos {
+  /* Adjust for macOS traffic lights if using custom titlebar */
+}
+
+body.tauri-desktop.platform-macos .desktop-titlebar {
+  padding-left: 80px; /* Space for traffic lights */
+}
+
+/* Windows specific */
+body.tauri-desktop.platform-windows .desktop-titlebar-controls {
+  /* Windows-style window controls on the right */
+}
+
+/* Linux specific */
+body.tauri-desktop.platform-linux {
+  /* Linux-specific adjustments */
+}
