@@ -1925,6 +1925,59 @@
       background: rgba(139, 92, 246, 0.4);
     }
 
+    /* Droid Name Badge - Star Wars style callsign display */
+    .droid-name-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #d97706;
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+      letter-spacing: 0.5px;
+    }
+
+    .droid-name-badge i {
+      font-size: 10px;
+      opacity: 0.8;
+    }
+
+    body.dark .droid-name-badge {
+      background: rgba(245, 158, 11, 0.2);
+      border-color: rgba(245, 158, 11, 0.4);
+      color: #fbbf24;
+    }
+
+    /* Login page droid name display */
+    .user-droid-name {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 2px 6px;
+      background: rgba(245, 158, 11, 0.12);
+      border-radius: 8px;
+      font-size: 10px;
+      font-weight: 600;
+      color: #d97706;
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+      letter-spacing: 0.5px;
+      margin-left: 6px;
+    }
+
+    .user-droid-name i {
+      font-size: 9px;
+      opacity: 0.7;
+    }
+
+    body.dark .user-droid-name {
+      background: rgba(245, 158, 11, 0.18);
+      color: #fbbf24;
+    }
+
     .header-actions {
       display: flex;
       align-items: center;
@@ -7013,6 +7066,10 @@
             <button class="guid-copy-btn" id="guid-copy-btn" title="Copy GUID">
               <i class="fas fa-copy"></i>
             </button>
+          </span>
+          <span class="droid-name-badge" id="user-droid-badge" title="Your droid callsign">
+            <i class="fas fa-robot"></i>
+            <span id="user-droid-name"></span>
           </span>
         </h1>
         <div class="voice-indicator" id="voice-indicator">
@@ -12630,6 +12687,10 @@
         guidBadge.setAttribute("data-short-guid", shortGuid);
         guidBadge.classList.remove("expanded");
 
+        // Display user's droid name (generated from GUID)
+        const userDroidName = appState.generateDroidName(userGuid);
+        document.getElementById("user-droid-name").textContent = userDroidName;
+
         this.loadUserChats();
         this.applyTheme();
         this.applySettings();
@@ -12677,10 +12738,16 @@
           const initials = user.username.substring(0, 2).toUpperCase();
           
           const shortGuid = user.id.substring(0, 8);
+          const droidName = appState.generateDroidName(user.id);
           userElement.innerHTML = `
             <div class="user-item-avatar">${initials}</div>
             <div class="user-item-info">
-              <div class="user-item-name">${user.username}</div>
+              <div class="user-item-name">
+                ${user.username}
+                <span class="user-droid-name" title="Droid callsign">
+                  <i class="fas fa-robot"></i> ${droidName}
+                </span>
+              </div>
               <div class="user-item-meta">
                 <span class="user-guid-flip" data-full-guid="${user.id}" data-short-guid="${shortGuid}..." title="Click to flip">
                   <i class="fas fa-fingerprint"></i>
@@ -13892,6 +13959,10 @@
           // Use the current user's GUID for user-specific memory and context
           const userGuid = appState.currentUser?.id || "c0p110t0-aaaa-bbbb-cccc-123456789abc";
 
+          // Generate droid names for voice addressing
+          const userDroidName = appState.generateDroidName(userGuid);
+          const aiDroidName = appState.settings.aiDroidName || "4ovz";
+
           const response = await fetch(endpoint.url, {
             method: "POST",
             headers: {
@@ -13902,6 +13973,8 @@
               user_input: message || "Please analyze this image",
               conversation_history: chat.messages,
               user_guid: userGuid,
+              user_droid_name: userDroidName,
+              ai_droid_name: aiDroidName,
             }),
           });
 
@@ -14054,6 +14127,11 @@
         // Processing cursor - Cycle 9 Feature
         document.body.classList.add('processing');
 
+        // Start the ambient processing hum to signal AI is thinking
+        if (soundManager && appState.settings.ambientSoundsEnabled) {
+          soundManager.startAmbientSound();
+        }
+
         const existingLoading = document.getElementById("loading-indicator");
         if (existingLoading) {
           existingLoading.remove();
@@ -14105,6 +14183,11 @@
       hideLoadingIndicator() {
         // Processing cursor - Cycle 9 Feature
         document.body.classList.remove('processing');
+
+        // Stop the ambient processing hum
+        if (soundManager) {
+          soundManager.stopAmbientSound();
+        }
 
         // Clear phrase rotation interval
         if (this.loadingPhraseInterval) {
