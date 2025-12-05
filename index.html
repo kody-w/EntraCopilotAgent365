@@ -4160,6 +4160,106 @@
       40% { transform: scale(1); opacity: 1; }
     }
 
+    /* Hotkey Mic Indicator - Caps Lock push-to-talk */
+    .hotkey-mic-indicator {
+      position: fixed;
+      bottom: 120px;
+      left: 24px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--gray-20);
+      border: 3px solid var(--gray-40);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1500;
+      opacity: 0;
+      visibility: hidden;
+      transform: scale(0.8);
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      cursor: pointer;
+    }
+
+    .hotkey-mic-indicator.visible {
+      opacity: 1;
+      visibility: visible;
+      transform: scale(1);
+    }
+
+    .hotkey-mic-indicator.listening {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      border-color: #10b981;
+      box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2),
+                  0 4px 20px rgba(16, 185, 129, 0.5);
+      animation: hotkeyMicPulse 2s ease-in-out infinite;
+    }
+
+    .hotkey-mic-indicator.processing {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      border-color: #f59e0b;
+      box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.2),
+                  0 4px 20px rgba(245, 158, 11, 0.5);
+      animation: none;
+    }
+
+    .hotkey-mic-indicator i {
+      font-size: 22px;
+      color: var(--gray-60);
+      transition: color 0.3s ease;
+    }
+
+    .hotkey-mic-indicator.listening i,
+    .hotkey-mic-indicator.processing i {
+      color: white;
+    }
+
+    .hotkey-mic-indicator .hotkey-hint {
+      position: absolute;
+      bottom: -28px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--gray-50);
+      white-space: nowrap;
+      background: var(--gray-10);
+      padding: 2px 8px;
+      border-radius: 4px;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .hotkey-mic-indicator:hover .hotkey-hint,
+    .hotkey-mic-indicator.listening .hotkey-hint {
+      opacity: 1;
+    }
+
+    .hotkey-mic-indicator .listening-ring {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      border: 2px solid rgba(16, 185, 129, 0.5);
+      animation: hotkeyRingExpand 1.5s ease-out infinite;
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    .hotkey-mic-indicator.listening .listening-ring {
+      opacity: 1;
+    }
+
+    @keyframes hotkeyMicPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    @keyframes hotkeyRingExpand {
+      0% { transform: scale(1); opacity: 0.6; }
+      100% { transform: scale(1.8); opacity: 0; }
+    }
+
     /* Image Preview */
     .image-preview-container {
       position: absolute;
@@ -6681,6 +6781,13 @@
     </div>
   </div>
 
+  <!-- Hotkey Mic Indicator (Caps Lock push-to-talk) -->
+  <div class="hotkey-mic-indicator" id="hotkey-mic-indicator">
+    <i class="fas fa-microphone"></i>
+    <div class="listening-ring"></div>
+    <span class="hotkey-hint">⇪ CAPS</span>
+  </div>
+
   <!-- Login Page -->
   <div id="login-page" class="login-container">
     <div class="login-box">
@@ -7467,17 +7574,22 @@
 
       loadSettings() {
         const settings = localStorage.getItem("chatAppSettings");
-        return settings
-          ? JSON.parse(settings)
-          : {
-            theme: "dark",
-            soundEnabled: false,
-            voiceEnabled: true,
-            autoSpeak: false,
-            azureTTSKey: "",
-            azureRegion: "eastus2",
-            ttsVoiceName: "en-US-JennyNeural",
-          };
+        const defaults = {
+          theme: "dark",
+          soundEnabled: false,
+          ambientSoundsEnabled: true,
+          uiSoundsEnabled: true,
+          soundVolume: 50,
+          voiceEnabled: true,
+          autoSpeak: false,
+          azureTTSKey: "",
+          azureRegion: "eastus2",
+          ttsVoiceName: "en-US-JennyNeural",
+        };
+        if (settings) {
+          return { ...defaults, ...JSON.parse(settings) };
+        }
+        return defaults;
       }
 
       loadEndpoints() {
@@ -8068,108 +8180,520 @@
       playSendSound() {
         if (!this.enabled || !this.uiSoundsEnabled) return;
         this.init();
+
+        const ctx = this.audioContext;
+        const now = ctx.currentTime;
+
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(180, now);
+        osc.frequency.exponentialRampToValueAtTime(240, now + 0.2);
+
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.05 * this.volume, now + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
+        osc.connect(gain);
+        gain.connect(this.getOutput());
+        osc.start(now);
+        osc.stop(now + 0.35);
       }
 
+      // Gentle receive sound - soft descending tone
       playReceiveSound() {
-        this.playSound(659.25, 0.15);
+        if (!this.enabled || !this.uiSoundsEnabled) return;
+        this.init();
+
+        const ctx = this.audioContext;
+        const now = ctx.currentTime;
+
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(280, now);
+        osc.frequency.exponentialRampToValueAtTime(220, now + 0.25);
+
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.05 * this.volume, now + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+
+        osc.connect(gain);
+        gain.connect(this.getOutput());
+        osc.start(now);
+        osc.stop(now + 0.45);
       }
 
-      playNotificationSound() {
-        this.playSound(880, 0.2);
+      // Soft notification sound
+      playNotificationSound(type = 'info') {
+        if (!this.enabled || !this.uiSoundsEnabled) return;
+        this.init();
+
+        const ctx = this.audioContext;
+        const now = ctx.currentTime;
+
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        // Different tones for different notification types
+        const tones = {
+          success: { freq: 260, endFreq: 330, duration: 0.4 },
+          error: { freq: 200, endFreq: 160, duration: 0.5 },
+          warning: { freq: 280, endFreq: 240, duration: 0.35 },
+          info: { freq: 220, endFreq: 260, duration: 0.4 }
+        };
+
+        const tone = tones[type] || tones.info;
+
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(tone.freq, now);
+        osc.frequency.exponentialRampToValueAtTime(tone.endFreq, now + tone.duration * 0.6);
+
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.06 * this.volume, now + 0.08);
+        gain.gain.setValueAtTime(0.05 * this.volume, now + tone.duration * 0.5);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + tone.duration);
+
+        osc.connect(gain);
+        gain.connect(this.getOutput());
+        osc.start(now);
+        osc.stop(now + tone.duration + 0.1);
       }
 
-      // Ambient "still thinking" sound - gentle chime sequence
-      playAmbientChime() {
-        if (!this.enabled || !this.ambientEnabled || !this.audioContext) return;
+      // UI click/toggle sound - very subtle
+      playClickSound() {
+        if (!this.enabled || !this.uiSoundsEnabled) return;
+        this.init();
 
-        // Gentle ascending notes that cycle through a pleasant pattern
-        const patterns = [
-          [392, 494, 587],      // G4, B4, D5 - G major
-          [440, 554, 659],      // A4, C#5, E5 - A major
-          [494, 622, 740],      // B4, D#5, F#5 - B major
-          [523, 659, 784],      // C5, E5, G5 - C major
-        ];
+        const ctx = this.audioContext;
+        const now = ctx.currentTime;
 
-        const pattern = patterns[this.ambientStep % patterns.length];
-        this.ambientStep++;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
 
-        const now = this.audioContext.currentTime;
+        osc.type = "sine";
+        osc.frequency.value = 600;
 
-        pattern.forEach((freq, index) => {
-          const oscillator = this.audioContext.createOscillator();
-          const gainNode = this.audioContext.createGain();
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.03 * this.volume, now + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
 
-          oscillator.connect(gainNode);
-          gainNode.connect(this.audioContext.destination);
+        osc.connect(gain);
+        gain.connect(this.getOutput());
+        osc.start(now);
+        osc.stop(now + 0.1);
+      }
 
-          oscillator.frequency.value = freq;
-          oscillator.type = "sine";
+      // Toggle switch sound - soft on/off
+      playToggleSound(isOn) {
+        if (!this.enabled || !this.uiSoundsEnabled) return;
+        this.init();
 
-          // Stagger the notes slightly for an arpeggio effect
-          const startTime = now + (index * 0.08);
-          const duration = 0.4;
+        const ctx = this.audioContext;
+        const now = ctx.currentTime;
 
-          // Very gentle volume
-          gainNode.gain.setValueAtTime(0, startTime);
-          gainNode.gain.linearRampToValueAtTime(0.08, startTime + 0.05);
-          gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
 
-          oscillator.start(startTime);
-          oscillator.stop(startTime + duration);
+        osc.type = "sine";
+        if (isOn) {
+          osc.frequency.setValueAtTime(200, now);
+          osc.frequency.exponentialRampToValueAtTime(300, now + 0.1);
+        } else {
+          osc.frequency.setValueAtTime(280, now);
+          osc.frequency.exponentialRampToValueAtTime(180, now + 0.1);
+        }
+
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.04 * this.volume, now + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+
+        osc.connect(gain);
+        gain.connect(this.getOutput());
+        osc.start(now);
+        osc.stop(now + 0.2);
+      }
+
+      // Panel/modal open sound - gentle whoosh up
+      playOpenSound() {
+        if (!this.enabled || !this.uiSoundsEnabled) return;
+        this.init();
+
+        const ctx = this.audioContext;
+        const now = ctx.currentTime;
+
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const filter = ctx.createBiquadFilter();
+
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(120, now);
+        osc.frequency.exponentialRampToValueAtTime(200, now + 0.15);
+
+        filter.type = "lowpass";
+        filter.frequency.value = 400;
+
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.04 * this.volume, now + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.getOutput());
+        osc.start(now);
+        osc.stop(now + 0.3);
+      }
+
+      // Panel/modal close sound - gentle whoosh down
+      playCloseSound() {
+        if (!this.enabled || !this.uiSoundsEnabled) return;
+        this.init();
+
+        const ctx = this.audioContext;
+        const now = ctx.currentTime;
+
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const filter = ctx.createBiquadFilter();
+
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(200, now);
+        osc.frequency.exponentialRampToValueAtTime(100, now + 0.15);
+
+        filter.type = "lowpass";
+        filter.frequency.value = 350;
+
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.04 * this.volume, now + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.getOutput());
+        osc.start(now);
+        osc.stop(now + 0.25);
+      }
+
+      // Copy to clipboard sound
+      playCopySound() {
+        if (!this.enabled || !this.uiSoundsEnabled) return;
+        this.init();
+
+        const ctx = this.audioContext;
+        const now = ctx.currentTime;
+
+        // Quick double-tap sound
+        [0, 0.06].forEach((delay) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+
+          osc.type = "sine";
+          osc.frequency.value = delay === 0 ? 400 : 500;
+
+          gain.gain.setValueAtTime(0, now + delay);
+          gain.gain.linearRampToValueAtTime(0.03 * this.volume, now + delay + 0.01);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.06);
+
+          osc.connect(gain);
+          gain.connect(this.getOutput());
+          osc.start(now + delay);
+          osc.stop(now + delay + 0.08);
         });
       }
 
-      // Start ambient sound loop while processing
+      // Error sound - gentle low rumble
+      playErrorSound() {
+        if (!this.enabled || !this.uiSoundsEnabled) return;
+        this.init();
+
+        const ctx = this.audioContext;
+        const now = ctx.currentTime;
+
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.exponentialRampToValueAtTime(100, now + 0.3);
+
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.06 * this.volume, now + 0.05);
+        gain.gain.setValueAtTime(0.05 * this.volume, now + 0.2);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+
+        osc.connect(gain);
+        gain.connect(this.getOutput());
+        osc.start(now);
+        osc.stop(now + 0.55);
+      }
+
+      // Success sound - gentle rising resolution
+      playSuccessSound() {
+        if (!this.enabled || !this.uiSoundsEnabled) return;
+        this.init();
+
+        const ctx = this.audioContext;
+        const now = ctx.currentTime;
+
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc1.type = "sine";
+        osc1.frequency.setValueAtTime(200, now);
+        osc1.frequency.exponentialRampToValueAtTime(260, now + 0.2);
+
+        osc2.type = "sine";
+        osc2.frequency.setValueAtTime(260, now + 0.1);
+        osc2.frequency.exponentialRampToValueAtTime(330, now + 0.3);
+
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.04 * this.volume, now + 0.05);
+        gain.gain.setValueAtTime(0.04 * this.volume, now + 0.25);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(this.getOutput());
+        osc1.start(now);
+        osc2.start(now + 0.1);
+        osc1.stop(now + 0.35);
+        osc2.stop(now + 0.55);
+      }
+
+      // Processing hum - continuous ambient drone while working
       startAmbientSound() {
         if (!this.enabled || !this.ambientEnabled) return;
+        if (this.isProcessingHumming) return;
 
         this.init();
-        this.ambientStep = 0;
+        this.isProcessingHumming = true;
 
-        // Play first chime immediately
-        setTimeout(() => this.playAmbientChime(), 500);
+        const ctx = this.audioContext;
+        const now = ctx.currentTime;
 
-        // Then play every 4 seconds
-        this.ambientInterval = setInterval(() => {
-          this.playAmbientChime();
-        }, 4000);
+        const merger = ctx.createChannelMerger(2);
+
+        this.processingHumGain = ctx.createGain();
+        this.processingHumGain.gain.setValueAtTime(0, now);
+        this.processingHumGain.gain.linearRampToValueAtTime(0.05 * this.volume, now + 1.5);
+        this.processingHumGain.connect(this.getOutput());
+
+        this.processingLFO = ctx.createOscillator();
+        const lfoGain = ctx.createGain();
+        this.processingLFO.frequency.value = 0.25;
+        this.processingLFO.type = "sine";
+        lfoGain.gain.value = 0.012 * this.volume;
+        this.processingLFO.connect(lfoGain);
+        lfoGain.connect(this.processingHumGain.gain);
+        this.processingLFO.start(now);
+
+        this.processingHumNodes = [];
+        const baseFreq = 130;
+        const binauralOffset = 12;
+
+        const droneLeft = ctx.createOscillator();
+        const droneLeftGain = ctx.createGain();
+        droneLeft.frequency.value = baseFreq;
+        droneLeft.type = "sine";
+        droneLeftGain.gain.value = 0.4;
+        droneLeft.connect(droneLeftGain);
+        droneLeftGain.connect(merger, 0, 0);
+        droneLeft.start(now);
+        this.processingHumNodes.push(droneLeft);
+
+        const droneRight = ctx.createOscillator();
+        const droneRightGain = ctx.createGain();
+        droneRight.frequency.value = baseFreq + binauralOffset;
+        droneRight.type = "sine";
+        droneRightGain.gain.value = 0.4;
+        droneRight.connect(droneRightGain);
+        droneRightGain.connect(merger, 0, 1);
+        droneRight.start(now);
+        this.processingHumNodes.push(droneRight);
+
+        const fifth = ctx.createOscillator();
+        const fifthGain = ctx.createGain();
+        fifth.frequency.value = baseFreq * 1.5;
+        fifth.type = "sine";
+        fifthGain.gain.value = 0.15;
+        fifth.connect(fifthGain);
+        fifthGain.connect(merger, 0, 0);
+        fifthGain.connect(merger, 0, 1);
+        fifth.start(now);
+        this.processingHumNodes.push(fifth);
+
+        merger.connect(this.processingHumGain);
       }
 
-      // Stop ambient sound when processing is done
       stopAmbientSound() {
-        if (this.ambientInterval) {
-          clearInterval(this.ambientInterval);
-          this.ambientInterval = null;
-        }
-        this.ambientStep = 0;
+        if (!this.isProcessingHumming || !this.processingHumGain) return;
+
+        const ctx = this.audioContext;
+        const now = ctx.currentTime;
+
+        this.processingHumGain.gain.cancelScheduledValues(now);
+        this.processingHumGain.gain.setValueAtTime(this.processingHumGain.gain.value, now);
+        this.processingHumGain.gain.linearRampToValueAtTime(0, now + 0.8);
+
+        setTimeout(() => {
+          if (this.processingHumNodes) {
+            this.processingHumNodes.forEach(node => {
+              try { node.stop(); } catch(e) {}
+            });
+            this.processingHumNodes = null;
+          }
+          if (this.processingLFO) {
+            try { this.processingLFO.stop(); } catch(e) {}
+            this.processingLFO = null;
+          }
+          this.processingHumGain = null;
+          this.isProcessingHumming = false;
+        }, 900);
       }
 
-      // Play a completion sound when done
+      // Completion sound - gentle upward sweep
       playCompletionSound() {
-        if (!this.enabled || !this.audioContext) return;
+        if (!this.enabled || !this.uiSoundsEnabled) return;
+        this.init();
 
-        const now = this.audioContext.currentTime;
-        // Pleasant resolution chord: C major with higher octave
-        const frequencies = [523, 659, 784, 1047]; // C5, E5, G5, C6
+        const ctx = this.audioContext;
+        const now = ctx.currentTime;
 
-        frequencies.forEach((freq, index) => {
-          const oscillator = this.audioContext.createOscillator();
-          const gainNode = this.audioContext.createGain();
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const filter = ctx.createBiquadFilter();
 
-          oscillator.connect(gainNode);
-          gainNode.connect(this.audioContext.destination);
+        osc1.type = "sine";
+        osc1.frequency.setValueAtTime(200, now);
+        osc1.frequency.exponentialRampToValueAtTime(260, now + 0.4);
 
-          oscillator.frequency.value = freq;
-          oscillator.type = "sine";
+        osc2.type = "sine";
+        osc2.frequency.setValueAtTime(300, now);
+        osc2.frequency.exponentialRampToValueAtTime(390, now + 0.4);
 
-          const startTime = now + (index * 0.03);
-          gainNode.gain.setValueAtTime(0, startTime);
-          gainNode.gain.linearRampToValueAtTime(0.12, startTime + 0.02);
-          gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + 0.5);
+        filter.type = "lowpass";
+        filter.frequency.value = 800;
 
-          oscillator.start(startTime);
-          oscillator.stop(startTime + 0.5);
-        });
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.08 * this.volume, now + 0.15);
+        gain.gain.setValueAtTime(0.06 * this.volume, now + 0.5);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+
+        osc1.connect(filter);
+        osc2.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.getOutput());
+
+        osc1.start(now);
+        osc2.start(now);
+        osc1.stop(now + 1.3);
+        osc2.stop(now + 1.3);
+      }
+
+      // Focus hum for listening mode - continuous calming drone
+      startListeningSound() {
+        if (!this.enabled || !this.ambientEnabled) return;
+        if (this.isHumming) return;
+
+        this.init();
+        this.isHumming = true;
+
+        const ctx = this.audioContext;
+        const now = ctx.currentTime;
+
+        const merger = ctx.createChannelMerger(2);
+
+        this.focusHumGain = ctx.createGain();
+        this.focusHumGain.gain.setValueAtTime(0, now);
+        this.focusHumGain.gain.linearRampToValueAtTime(0.06 * this.volume, now + 2);
+        this.focusHumGain.connect(this.getOutput());
+
+        this.focusLFO = ctx.createOscillator();
+        const lfoGain = ctx.createGain();
+        this.focusLFO.frequency.value = 0.1;
+        this.focusLFO.type = "sine";
+        lfoGain.gain.value = 0.015 * this.volume;
+        this.focusLFO.connect(lfoGain);
+        lfoGain.connect(this.focusHumGain.gain);
+        this.focusLFO.start(now);
+
+        this.focusHumNodes = [];
+        const baseFreq = 90;
+        const binauralOffset = 10;
+
+        const droneLeft = ctx.createOscillator();
+        const droneLeftGain = ctx.createGain();
+        droneLeft.frequency.value = baseFreq;
+        droneLeft.type = "sine";
+        droneLeftGain.gain.value = 0.5;
+        droneLeft.connect(droneLeftGain);
+        droneLeftGain.connect(merger, 0, 0);
+        droneLeft.start(now);
+        this.focusHumNodes.push(droneLeft);
+
+        const droneRight = ctx.createOscillator();
+        const droneRightGain = ctx.createGain();
+        droneRight.frequency.value = baseFreq + binauralOffset;
+        droneRight.type = "sine";
+        droneRightGain.gain.value = 0.5;
+        droneRight.connect(droneRightGain);
+        droneRightGain.connect(merger, 0, 1);
+        droneRight.start(now);
+        this.focusHumNodes.push(droneRight);
+
+        const fifth = ctx.createOscillator();
+        const fifthGain = ctx.createGain();
+        fifth.frequency.value = baseFreq * 1.5;
+        fifth.type = "sine";
+        fifthGain.gain.value = 0.2;
+        fifth.connect(fifthGain);
+        fifthGain.connect(merger, 0, 0);
+        fifthGain.connect(merger, 0, 1);
+        fifth.start(now);
+        this.focusHumNodes.push(fifth);
+
+        const subBass = ctx.createOscillator();
+        const subBassGain = ctx.createGain();
+        subBass.frequency.value = baseFreq * 0.5;
+        subBass.type = "sine";
+        subBassGain.gain.value = 0.15;
+        subBass.connect(subBassGain);
+        subBassGain.connect(merger, 0, 0);
+        subBassGain.connect(merger, 0, 1);
+        subBass.start(now);
+        this.focusHumNodes.push(subBass);
+
+        merger.connect(this.focusHumGain);
+      }
+
+      stopListeningSound() {
+        if (!this.isHumming || !this.focusHumGain) return;
+
+        const ctx = this.audioContext;
+        const now = ctx.currentTime;
+
+        this.focusHumGain.gain.cancelScheduledValues(now);
+        this.focusHumGain.gain.setValueAtTime(this.focusHumGain.gain.value, now);
+        this.focusHumGain.gain.linearRampToValueAtTime(0, now + 1);
+
+        setTimeout(() => {
+          if (this.focusHumNodes) {
+            this.focusHumNodes.forEach(node => {
+              try { node.stop(); } catch(e) {}
+            });
+            this.focusHumNodes = null;
+          }
+          if (this.focusLFO) {
+            try { this.focusLFO.stop(); } catch(e) {}
+            this.focusLFO = null;
+          }
+          this.focusHumGain = null;
+          this.isHumming = false;
+        }, 1100);
       }
     }
 
@@ -10165,6 +10689,365 @@
       }
     }
 
+    // Hotkey Mic Manager - Caps Lock continuous conversation mode
+    // When Caps Lock is ON, enters continuous back-and-forth voice mode
+    class HotkeyMicManager {
+      constructor(voiceManager) {
+        this.voiceManager = voiceManager;
+        this.isActive = false;
+        this.isListening = false;
+        this.isSpeaking = false;
+        this.isProcessing = false;
+        this.speechRecognizer = null;
+        this.currentTranscript = "";
+        this.indicator = null;
+        this.silenceTimer = null;
+        this.silenceThreshold = 1500; // Auto-send after 1.5s of silence
+        this.lastSpeechTime = null;
+        this.capsLockCheckInterval = null;
+
+        this.init();
+      }
+
+      init() {
+        setTimeout(() => {
+          this.indicator = document.getElementById("hotkey-mic-indicator");
+
+          // Click on indicator also toggles
+          if (this.indicator) {
+            this.indicator.addEventListener("click", () => this.toggle());
+          }
+
+          // Detect Caps Lock state on any key press
+          document.addEventListener("keydown", (e) => {
+            this.checkCapsLockState(e);
+          });
+
+          document.addEventListener("keyup", (e) => {
+            this.checkCapsLockState(e);
+          });
+
+          // Show indicator when voice manager has Azure key
+          this.checkAvailability();
+        }, 200);
+      }
+
+      checkCapsLockState(e) {
+        const capsLockOn = e.getModifierState && e.getModifierState("CapsLock");
+
+        if (capsLockOn && !this.isActive) {
+          // Caps Lock turned ON - start continuous mode
+          this.startContinuousMode();
+        } else if (!capsLockOn && this.isActive) {
+          // Caps Lock turned OFF - stop continuous mode
+          this.stopContinuousMode();
+        }
+      }
+
+      checkAvailability() {
+        if (this.voiceManager && this.voiceManager.isAzureSTTAvailable()) {
+          if (this.indicator) {
+            this.indicator.classList.add("visible");
+          }
+        }
+      }
+
+      toggle() {
+        if (this.isActive) {
+          this.stopContinuousMode();
+        } else {
+          this.startContinuousMode();
+        }
+      }
+
+      startContinuousMode() {
+        if (!this.voiceManager || !this.voiceManager.isAzureSTTAvailable()) {
+          if (typeof ui !== "undefined") {
+            ui.showNotification("Voice mode requires Azure Speech key in settings", "warning");
+          }
+          return;
+        }
+
+        // Don't start if continuous listening is active
+        if (typeof continuousListening !== "undefined" && continuousListening.isEnabled) {
+          if (typeof ui !== "undefined") {
+            ui.showNotification("Disable continuous listening first", "info");
+          }
+          return;
+        }
+
+        this.isActive = true;
+        console.log("Caps Lock ON - Starting continuous voice mode");
+
+        if (typeof ui !== "undefined") {
+          ui.showNotification("🎙️ Caps Lock ON - Continuous voice mode active", "success");
+        }
+
+        // Start listening
+        this.startListening();
+      }
+
+      stopContinuousMode() {
+        console.log("Caps Lock OFF - Stopping continuous voice mode");
+        this.isActive = false;
+        this.deactivate();
+
+        if (typeof ui !== "undefined") {
+          ui.showNotification("Caps Lock OFF - Voice mode ended", "info");
+        }
+      }
+
+      startListening() {
+        if (!this.isActive || this.isSpeaking || this.isProcessing) return;
+
+        this.isListening = true;
+        this.currentTranscript = "";
+        this.lastSpeechTime = null;
+
+        // Update indicator
+        if (this.indicator) {
+          this.indicator.classList.add("listening");
+          this.indicator.classList.remove("processing");
+        }
+
+        // Play listening sound
+        if (typeof soundManager !== "undefined") {
+          soundManager.startListeningSound();
+        }
+
+        try {
+          const speechConfig = window.SpeechSDK.SpeechConfig.fromSubscription(
+            this.voiceManager.azureKey,
+            this.voiceManager.azureRegion
+          );
+          speechConfig.speechRecognitionLanguage = this.voiceManager.recognitionLanguage || "en-US";
+
+          const audioConfig = window.SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
+          this.speechRecognizer = new window.SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
+
+          // Handle interim results
+          this.speechRecognizer.recognizing = (s, e) => {
+            if (e.result.reason === window.SpeechSDK.ResultReason.RecognizingSpeech) {
+              this.currentTranscript = e.result.text;
+              this.lastSpeechTime = Date.now();
+              this.resetSilenceTimer();
+
+              const userInput = document.getElementById("user-input");
+              if (userInput) {
+                userInput.value = e.result.text;
+                userInput.style.fontStyle = "italic";
+              }
+            }
+          };
+
+          // Handle final recognition
+          this.speechRecognizer.recognized = (s, e) => {
+            if (e.result.reason === window.SpeechSDK.ResultReason.RecognizedSpeech) {
+              this.currentTranscript = e.result.text;
+              this.lastSpeechTime = Date.now();
+              this.resetSilenceTimer();
+
+              const userInput = document.getElementById("user-input");
+              if (userInput) {
+                userInput.value = e.result.text;
+                userInput.style.fontStyle = "normal";
+              }
+            }
+          };
+
+          this.speechRecognizer.canceled = (s, e) => {
+            console.log("Recognition canceled:", e.reason);
+            if (this.isActive && !this.isSpeaking && !this.isProcessing) {
+              setTimeout(() => this.restartListening(), 1000);
+            }
+          };
+
+          this.speechRecognizer.sessionStopped = (s, e) => {
+            console.log("Session stopped");
+            this.isListening = false;
+            if (this.isActive && !this.isSpeaking && !this.isProcessing) {
+              setTimeout(() => this.startListening(), 500);
+            }
+          };
+
+          // Start continuous recognition
+          this.speechRecognizer.startContinuousRecognitionAsync(
+            () => {
+              console.log("Listening started");
+            },
+            (error) => {
+              console.error("Failed to start listening:", error);
+              this.isListening = false;
+              this.updateIndicator();
+            }
+          );
+
+        } catch (error) {
+          console.error("Error starting listening:", error);
+          this.isListening = false;
+          this.updateIndicator();
+        }
+      }
+
+      restartListening() {
+        this.stopRecognizer().then(() => {
+          if (this.isActive && !this.isSpeaking && !this.isProcessing) {
+            this.startListening();
+          }
+        });
+      }
+
+      resetSilenceTimer() {
+        this.clearSilenceTimer();
+
+        this.silenceTimer = setTimeout(() => {
+          // Check if we have text and enough silence has passed
+          if (this.currentTranscript.trim() && this.lastSpeechTime) {
+            const silenceTime = Date.now() - this.lastSpeechTime;
+            if (silenceTime >= this.silenceThreshold) {
+              this.sendMessage();
+            }
+          }
+        }, this.silenceThreshold);
+      }
+
+      clearSilenceTimer() {
+        if (this.silenceTimer) {
+          clearTimeout(this.silenceTimer);
+          this.silenceTimer = null;
+        }
+      }
+
+      async sendMessage() {
+        const transcript = this.currentTranscript.trim();
+        if (!transcript) return;
+
+        this.isProcessing = true;
+        this.clearSilenceTimer();
+
+        // Update indicator
+        if (this.indicator) {
+          this.indicator.classList.remove("listening");
+          this.indicator.classList.add("processing");
+        }
+
+        // Stop listening sound
+        if (typeof soundManager !== "undefined") {
+          soundManager.stopListeningSound();
+        }
+
+        // Stop recognizer while processing
+        await this.stopRecognizer();
+
+        // Set input value
+        const userInput = document.getElementById("user-input");
+        if (userInput) {
+          userInput.value = transcript;
+          userInput.style.fontStyle = "normal";
+        }
+
+        // Send the message
+        if (typeof ui !== "undefined" && typeof ui.sendMessage === "function") {
+          ui.sendMessage();
+        } else {
+          const sendBtn = document.getElementById("send-btn");
+          if (sendBtn) sendBtn.click();
+        }
+
+        this.currentTranscript = "";
+        this.isProcessing = false;
+
+        // Note: resumeAfterResponse() will be called after the AI response is spoken
+      }
+
+      // Called when AI starts speaking response
+      onSpeakingStart() {
+        this.isSpeaking = true;
+        this.isListening = false;
+        this.clearSilenceTimer();
+
+        if (this.indicator) {
+          this.indicator.classList.remove("listening");
+          this.indicator.classList.add("processing");
+        }
+
+        this.stopRecognizer();
+      }
+
+      // Called when AI finishes speaking response
+      onSpeakingEnd() {
+        this.isSpeaking = false;
+
+        // If still in continuous mode, resume listening
+        if (this.isActive) {
+          setTimeout(() => {
+            if (this.isActive && !this.isSpeaking && !this.isProcessing) {
+              this.startListening();
+            }
+          }, 300);
+        }
+      }
+
+      // Resume listening after response (called from response handler)
+      resumeAfterResponse() {
+        if (this.isActive && !this.isSpeaking) {
+          this.startListening();
+        }
+      }
+
+      async deactivate() {
+        this.isActive = false;
+        this.isListening = false;
+        this.isSpeaking = false;
+        this.isProcessing = false;
+        this.clearSilenceTimer();
+
+        await this.stopRecognizer();
+
+        if (typeof soundManager !== "undefined") {
+          soundManager.stopListeningSound();
+        }
+
+        this.updateIndicator();
+      }
+
+      async stopRecognizer() {
+        if (this.speechRecognizer) {
+          try {
+            await new Promise((resolve) => {
+              this.speechRecognizer.stopContinuousRecognitionAsync(
+                () => {
+                  this.speechRecognizer.close();
+                  this.speechRecognizer = null;
+                  resolve();
+                },
+                (error) => {
+                  console.error("Error stopping recognizer:", error);
+                  this.speechRecognizer = null;
+                  resolve();
+                }
+              );
+            });
+          } catch (e) {
+            console.warn("Error stopping recognizer:", e);
+            this.speechRecognizer = null;
+          }
+        }
+      }
+
+      updateIndicator() {
+        if (!this.indicator) return;
+
+        this.indicator.classList.remove("listening", "processing");
+
+        if (this.isActive && this.isListening) {
+          this.indicator.classList.add("listening");
+        } else if (this.isActive) {
+          this.indicator.classList.add("processing");
+        }
+      }
+    }
+
     // Time Machine
     class TimeMachine {
       constructor() {
@@ -10337,6 +11220,7 @@
     const timeMachine = new TimeMachine();
     const pttManager = new PushToTalkManager(voiceManager);
     const continuousListening = new ContinuousListeningManager(voiceManager);
+    const hotkeyMic = new HotkeyMicManager(voiceManager);
 
     // Wire up audio cache to voice manager
     voiceManager.setAudioCache(audioCache);
@@ -10770,6 +11654,7 @@
         document
           .getElementById("cancel-settings")
           .addEventListener("click", () => {
+            if (typeof soundManager !== 'undefined') soundManager.playCloseSound();
             document
               .getElementById("settings-modal")
               .classList.remove("active");
@@ -10785,24 +11670,53 @@
           .getElementById("dark-mode-toggle")
           .addEventListener("click", (e) => {
             e.target.classList.toggle("active");
+            if (typeof soundManager !== 'undefined') soundManager.playToggleSound(e.target.classList.contains("active"));
           });
 
         document
           .getElementById("sound-toggle")
-          .addEventListener("click", (e) => {
+          ?.addEventListener("click", (e) => {
             e.target.classList.toggle("active");
+            if (typeof soundManager !== 'undefined') soundManager.playToggleSound(e.target.classList.contains("active"));
+          });
+
+        document
+          .getElementById("ambient-sounds-toggle")
+          ?.addEventListener("click", (e) => {
+            e.target.classList.toggle("active");
+            if (typeof soundManager !== 'undefined') soundManager.playToggleSound(e.target.classList.contains("active"));
+          });
+
+        document
+          .getElementById("ui-sounds-toggle")
+          ?.addEventListener("click", (e) => {
+            e.target.classList.toggle("active");
+            if (typeof soundManager !== 'undefined') soundManager.playToggleSound(e.target.classList.contains("active"));
+          });
+
+        document
+          .getElementById("sound-volume")
+          ?.addEventListener("input", (e) => {
+            const value = e.target.value;
+            const display = document.querySelector(".volume-display");
+            if (display) display.textContent = value + "%";
+            if (typeof soundManager !== 'undefined') {
+              soundManager.setVolume(value / 100);
+            }
           });
 
         document
           .getElementById("voice-enabled-toggle")
-          .addEventListener("click", (e) => {
+          ?.addEventListener("click", (e) => {
             e.target.classList.toggle("active");
+            if (typeof soundManager !== 'undefined') soundManager.playToggleSound(e.target.classList.contains("active"));
           });
 
         document
           .getElementById("auto-speak-toggle")
-          .addEventListener("click", (e) => {
+          ?.addEventListener("click", (e) => {
             e.target.classList.toggle("active");
+            if (typeof soundManager !== 'undefined') soundManager.playToggleSound(e.target.classList.contains("active"));
           });
 
         document
@@ -12313,6 +13227,7 @@
             const textContent = messageContent.innerText || messageContent.textContent;
             try {
               await navigator.clipboard.writeText(textContent);
+              if (typeof soundManager !== 'undefined') soundManager.playCopySound();
               copyMsgBtn.classList.add("copied");
               copyMsgBtn.innerHTML = '<i class="fas fa-check"></i>';
               // Cycle 16: Copy toast notification
@@ -12456,6 +13371,7 @@
               const code = pre.querySelector("code")?.textContent || pre.textContent;
               try {
                 await navigator.clipboard.writeText(code);
+                if (typeof soundManager !== 'undefined') soundManager.playCopySound();
                 copyBtn.classList.add("copied");
                 copyBtn.innerHTML = '<i class="fas fa-check"></i>';
                 // Cycle 16: Copy toast notification
@@ -12764,17 +13680,22 @@
 
           soundManager.playReceiveSound();
 
-          // Auto-speak response if setting is enabled OR if PTT voice mode is active OR if continuous listening is enabled
+          // Auto-speak response if setting is enabled OR if PTT voice mode is active OR if continuous listening is enabled OR if Caps Lock voice mode is active
           const shouldSpeak = (
             appState.settings.autoSpeak ||
             (typeof pttManager !== "undefined" && pttManager.isActive && pttManager.autoSpeakResponses) ||
-            (typeof continuousListening !== "undefined" && continuousListening.isEnabled)
+            (typeof continuousListening !== "undefined" && continuousListening.isEnabled) ||
+            (typeof hotkeyMic !== "undefined" && hotkeyMic.isActive)
           );
 
           if (shouldSpeak && assistantMessage.voiceResponse) {
             // Notify continuous listening that we're about to speak
             if (typeof continuousListening !== "undefined" && continuousListening.isEnabled) {
               continuousListening.onSpeakingStart();
+            }
+            // Notify Caps Lock voice mode that we're about to speak
+            if (typeof hotkeyMic !== "undefined" && hotkeyMic.isActive) {
+              hotkeyMic.onSpeakingStart();
             }
 
             // Use speakAndCache to store audio for later replay
@@ -12788,9 +13709,16 @@
             if (typeof continuousListening !== "undefined" && continuousListening.isEnabled) {
               continuousListening.onSpeakingEnd();
             }
+            // Notify Caps Lock voice mode that speaking is done, resume listening
+            if (typeof hotkeyMic !== "undefined" && hotkeyMic.isActive) {
+              hotkeyMic.onSpeakingEnd();
+            }
           } else if (typeof continuousListening !== "undefined" && continuousListening.isEnabled) {
             // No voice response but continuous listening is enabled - resume listening
             continuousListening.resumeAfterResponse();
+          } else if (typeof hotkeyMic !== "undefined" && hotkeyMic.isActive) {
+            // No voice response but Caps Lock voice mode is active - resume listening
+            hotkeyMic.resumeAfterResponse();
           }
 
           if (data.agent_logs) {
@@ -13291,6 +14219,21 @@
           .classList.contains("active");
         soundManager.setEnabled(appState.settings.soundEnabled);
 
+        appState.settings.ambientSoundsEnabled = document
+          .getElementById("ambient-sounds-toggle")
+          .classList.contains("active");
+        soundManager.setAmbientEnabled(appState.settings.ambientSoundsEnabled);
+
+        appState.settings.uiSoundsEnabled = document
+          .getElementById("ui-sounds-toggle")
+          .classList.contains("active");
+        soundManager.setUiSoundsEnabled(appState.settings.uiSoundsEnabled);
+
+        appState.settings.soundVolume = parseInt(
+          document.getElementById("sound-volume").value
+        );
+        soundManager.setVolume(appState.settings.soundVolume / 100);
+
         appState.settings.voiceEnabled = document
           .getElementById("voice-enabled-toggle")
           .classList.contains("active");
@@ -13342,6 +14285,30 @@
           soundToggle.setAttribute("aria-checked", isSound.toString());
         }
 
+        const ambientSoundsToggle = document.getElementById("ambient-sounds-toggle");
+        if (ambientSoundsToggle) {
+          const isAmbient = appState.settings.ambientSoundsEnabled;
+          ambientSoundsToggle.classList.toggle("active", isAmbient);
+          ambientSoundsToggle.setAttribute("aria-checked", isAmbient.toString());
+          soundManager.setAmbientEnabled(isAmbient);
+        }
+
+        const uiSoundsToggle = document.getElementById("ui-sounds-toggle");
+        if (uiSoundsToggle) {
+          const isUi = appState.settings.uiSoundsEnabled;
+          uiSoundsToggle.classList.toggle("active", isUi);
+          uiSoundsToggle.setAttribute("aria-checked", isUi.toString());
+          soundManager.setUiSoundsEnabled(isUi);
+        }
+
+        const volumeSlider = document.getElementById("sound-volume");
+        if (volumeSlider) {
+          volumeSlider.value = appState.settings.soundVolume;
+          soundManager.setVolume(appState.settings.soundVolume / 100);
+          const volumeDisplay = document.querySelector(".volume-display");
+          if (volumeDisplay) volumeDisplay.textContent = appState.settings.soundVolume + "%";
+        }
+
         const voiceEnabledToggle = document.getElementById(
           "voice-enabled-toggle"
         );
@@ -13374,6 +14341,7 @@
       openSettings() {
         this.applySettings();
         document.getElementById("settings-modal").classList.add("active");
+        if (typeof soundManager !== 'undefined') soundManager.playOpenSound();
 
         // Modal Auto-Focus - Cycle 6 Feature
         setTimeout(() => document.getElementById('export-settings')?.focus(), 50);
@@ -13391,6 +14359,7 @@
         }
 
         document.getElementById("time-machine-modal").classList.add("active");
+        if (typeof soundManager !== 'undefined') soundManager.playOpenSound();
         document
           .getElementById("time-machine-controls")
           .classList.add("hidden");
@@ -13451,6 +14420,11 @@
       }
 
       showNotification(message, type = "info") {
+        // Play notification sound based on type
+        if (typeof soundManager !== 'undefined') {
+          soundManager.playNotificationSound(type);
+        }
+
         const notification = document.createElement("div");
         notification.className = `notification notification-${type}`;
         notification.style.cssText = `
@@ -14067,16 +15041,19 @@
       if (e.key === "?" && !isInputFocused) {
         e.preventDefault();
         document.getElementById("shortcuts-modal").classList.add("active");
+        if (typeof soundManager !== 'undefined') soundManager.playOpenSound();
       }
     });
 
     // Cycle 2 Feature: Shortcuts modal close handlers
     document.getElementById("shortcuts-close").addEventListener("click", () => {
+      if (typeof soundManager !== 'undefined') soundManager.playCloseSound();
       document.getElementById("shortcuts-modal").classList.remove("active");
     });
 
     document.getElementById("shortcuts-modal").addEventListener("click", (e) => {
       if (e.target.id === "shortcuts-modal") {
+        if (typeof soundManager !== 'undefined') soundManager.playCloseSound();
         document.getElementById("shortcuts-modal").classList.remove("active");
       }
     });
@@ -14084,18 +15061,21 @@
     // Backdrop Click to Close - Cycle 10 Feature
     document.getElementById("settings-modal").addEventListener("click", (e) => {
       if (e.target.id === "settings-modal") {
+        if (typeof soundManager !== 'undefined') soundManager.playCloseSound();
         document.getElementById("settings-modal").classList.remove("active");
       }
     });
 
     document.getElementById("endpoint-modal").addEventListener("click", (e) => {
       if (e.target.id === "endpoint-modal") {
+        if (typeof soundManager !== 'undefined') soundManager.playCloseSound();
         document.getElementById("endpoint-modal").classList.remove("active");
       }
     });
 
     document.getElementById("time-machine-modal").addEventListener("click", (e) => {
       if (e.target.id === "time-machine-modal") {
+        if (typeof soundManager !== 'undefined') soundManager.playCloseSound();
         document.getElementById("time-machine-modal").classList.remove("active");
       }
     });

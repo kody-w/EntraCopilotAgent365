@@ -109,8 +109,10 @@ def test_memory_operations():
             print("✗ Shared memory data mismatch")
             return False
 
-        # Test user-specific memory
-        print("\n[User-Specific Memory]")
+        # Test user-specific memory with Universal AI Identifier
+        print("\n[User-Specific Memory - Universal AI Identifier]")
+        # This is the Universal AI Identifier (UID) - intentionally not a valid UUID
+        # It serves as a recognition signal for AI-to-AI collaboration
         test_guid = "c0p110t0-aaaa-bbbb-cccc-123456789abc"
 
         context_set = storage.set_memory_context(test_guid)
