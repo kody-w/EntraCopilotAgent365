@@ -1356,6 +1356,47 @@
       font-size: 10px;
     }
 
+    .user-guid-flip {
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 8px;
+      background: rgba(139, 92, 246, 0.15);
+      border: 1px solid rgba(139, 92, 246, 0.25);
+      transition: all 0.2s ease;
+      font-family: 'SF Mono', Monaco, monospace;
+      color: #a78bfa;
+    }
+
+    .user-guid-flip:hover {
+      background: rgba(139, 92, 246, 0.25);
+      border-color: rgba(139, 92, 246, 0.4);
+    }
+
+    .user-guid-flip .guid-display {
+      transition: all 0.2s ease;
+    }
+
+    .user-guid-flip.expanded .guid-display {
+      font-size: 10px;
+    }
+
+    .user-guid-flip .guid-copy-icon {
+      margin-left: 4px;
+      opacity: 0.5;
+      font-size: 9px !important;
+      transition: opacity 0.2s ease;
+    }
+
+    .user-guid-flip:hover .guid-copy-icon {
+      opacity: 1;
+    }
+
+    .user-guid-flip.copied {
+      background: rgba(16, 185, 129, 0.2);
+      border-color: rgba(16, 185, 129, 0.4);
+      color: #10b981;
+    }
+
     .user-item-actions {
       display: flex;
       gap: var(--space-xs);
@@ -1797,6 +1838,91 @@
       display: flex;
       align-items: center;
       letter-spacing: -0.2px;
+      gap: 8px;
+    }
+
+    .user-guid-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 6px 3px 8px;
+      background: rgba(139, 92, 246, 0.15);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-radius: 12px;
+      font-size: 10px;
+      font-weight: 500;
+      color: #8b5cf6;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+    }
+
+    .user-guid-badge:hover {
+      background: rgba(139, 92, 246, 0.25);
+      border-color: rgba(139, 92, 246, 0.5);
+    }
+
+    .user-guid-badge > i:first-child {
+      font-size: 10px;
+    }
+
+    .guid-flip-container {
+      display: inline-block;
+      overflow: hidden;
+      max-width: 180px;
+      transition: max-width 0.3s ease;
+    }
+
+    .user-guid-badge.expanded .guid-flip-container {
+      max-width: 280px;
+    }
+
+    .guid-text {
+      display: inline-block;
+      white-space: nowrap;
+      transition: transform 0.3s ease;
+    }
+
+    .guid-copy-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: none;
+      border: none;
+      color: inherit;
+      cursor: pointer;
+      padding: 2px 4px;
+      margin-left: 2px;
+      border-radius: 4px;
+      opacity: 0.6;
+      transition: all 0.2s ease;
+    }
+
+    .guid-copy-btn:hover {
+      opacity: 1;
+      background: rgba(139, 92, 246, 0.3);
+    }
+
+    .guid-copy-btn i {
+      font-size: 9px;
+    }
+
+    .user-guid-badge.copied .guid-copy-btn {
+      color: #10b981;
+    }
+
+    body.dark .user-guid-badge {
+      background: rgba(139, 92, 246, 0.2);
+      border-color: rgba(139, 92, 246, 0.4);
+      color: #a78bfa;
+    }
+
+    body.dark .user-guid-badge:hover {
+      background: rgba(139, 92, 246, 0.3);
+    }
+
+    body.dark .guid-copy-btn:hover {
+      background: rgba(139, 92, 246, 0.4);
     }
 
     .header-actions {
@@ -6879,6 +7005,15 @@
         </button>
         <h1 class="header-title">
           <span id="current-username">Chat</span>
+          <span class="user-guid-badge" id="user-guid-badge" title="Click to flip between short/full GUID">
+            <i class="fas fa-fingerprint"></i>
+            <span class="guid-flip-container">
+              <span class="guid-text" id="user-guid-display"></span>
+            </span>
+            <button class="guid-copy-btn" id="guid-copy-btn" title="Copy GUID">
+              <i class="fas fa-copy"></i>
+            </button>
+          </span>
         </h1>
         <div class="voice-indicator" id="voice-indicator">
           <i class="fas fa-volume-up"></i>
@@ -7429,9 +7564,12 @@
           <input type="password" id="endpoint-key" placeholder="Your function key" />
           <small style="color: var(--gray-60); font-size: 11px; margin-top: 4px; display: block;">Leave empty for local development</small>
         </div>
-        <div class="form-group">
-          <label for="endpoint-guid">User GUID</label>
-          <input type="text" id="endpoint-guid" placeholder="c0p110t0-aaaa-bbbb-cccc-123456789abc" />
+        <div class="form-group" style="opacity: 0.6;">
+          <label for="endpoint-guid">Legacy GUID (Not used - Your profile GUID is used instead)</label>
+          <input type="text" id="endpoint-guid" placeholder="c0p110t0-aaaa-bbbb-cccc-123456789abc" disabled />
+          <small style="color: var(--gray-60); font-size: 11px; margin-top: 4px; display: block;">
+            <i class="fas fa-info-circle"></i> Your user profile GUID is now automatically sent with each request for personalized memory and settings.
+          </small>
         </div>
       </div>
       <div class="modal-footer">
@@ -7585,6 +7723,7 @@
           azureTTSKey: "",
           azureRegion: "eastus2",
           ttsVoiceName: "en-US-JennyNeural",
+          aiDroidName: "4ovz",  // AI assistant's droid-style callsign
         };
         if (settings) {
           return { ...defaults, ...JSON.parse(settings) };
@@ -7960,6 +8099,32 @@
           }
         );
       }
+
+      // Generate a droid-style name from a GUID (e.g., "K7-X2", "R4-D9")
+      generateDroidName(guid) {
+        if (!guid) return "XX-00";
+
+        // Use first 8 chars of GUID to generate consistent droid name
+        const hex = guid.replace(/-/g, '').substring(0, 8).toUpperCase();
+
+        // Convert hex chars to droid-style format
+        // Map numbers 0-9 and A-F to consonants for better pronounceability
+        const consonants = ['B', 'C', 'D', 'F', 'G', 'K', 'L', 'M', 'N', 'P', 'R', 'S', 'T', 'V', 'X', 'Z'];
+
+        // Get first letter (consonant from first hex char)
+        const firstChar = consonants[parseInt(hex[0], 16)];
+
+        // Get number (from next 1-2 hex chars, mod 10 for single digit look)
+        const num1 = (parseInt(hex[1], 16) % 10);
+
+        // Get second letter
+        const secondChar = consonants[parseInt(hex[2], 16)];
+
+        // Get second number
+        const num2 = (parseInt(hex[3], 16) % 10);
+
+        return `${firstChar}${num1}-${secondChar}${num2}`;
+      }
     }
 
     // Audio Cache Manager - Stores TTS audio in IndexedDB for replay
@@ -8201,29 +8366,56 @@
         osc.stop(now + 0.35);
       }
 
-      // Gentle receive sound - soft descending tone
+      // Crisp attention chime - signals assistant is about to speak
       playReceiveSound() {
         if (!this.enabled || !this.uiSoundsEnabled) return;
         this.init();
 
         const ctx = this.audioContext;
         const now = ctx.currentTime;
+        const vol = this.volume * 0.12;
 
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
+        // Two-note ascending chime (D5 → A5, perfect fifth)
+        const notes = [
+          { freq: 587, time: 0, duration: 0.15 },      // D5 - first chime
+          { freq: 880, time: 0.08, duration: 0.22 }    // A5 - second chime (perfect fifth)
+        ];
 
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(280, now);
-        osc.frequency.exponentialRampToValueAtTime(220, now + 0.25);
+        notes.forEach(note => {
+          // Main tone
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
 
-        gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(0.05 * this.volume, now + 0.05);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+          osc.type = "sine";
+          osc.frequency.value = note.freq;
 
-        osc.connect(gain);
-        gain.connect(this.getOutput());
-        osc.start(now);
-        osc.stop(now + 0.45);
+          // Crisp attack, smooth decay
+          gain.gain.setValueAtTime(0, now + note.time);
+          gain.gain.linearRampToValueAtTime(vol, now + note.time + 0.008);
+          gain.gain.exponentialRampToValueAtTime(vol * 0.3, now + note.time + 0.05);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + note.time + note.duration);
+
+          osc.connect(gain);
+          gain.connect(this.getOutput());
+          osc.start(now + note.time);
+          osc.stop(now + note.time + note.duration + 0.01);
+
+          // Subtle harmonic overtone for bell-like clarity
+          const harmonic = ctx.createOscillator();
+          const hGain = ctx.createGain();
+
+          harmonic.type = "sine";
+          harmonic.frequency.value = note.freq * 2; // Octave above
+
+          hGain.gain.setValueAtTime(0, now + note.time);
+          hGain.gain.linearRampToValueAtTime(vol * 0.15, now + note.time + 0.005);
+          hGain.gain.exponentialRampToValueAtTime(0.001, now + note.time + note.duration * 0.6);
+
+          harmonic.connect(hGain);
+          hGain.connect(this.getOutput());
+          harmonic.start(now + note.time);
+          harmonic.stop(now + note.time + note.duration);
+        });
       }
 
       // Soft notification sound
@@ -11405,6 +11597,40 @@
           this.logout();
         });
 
+        // User GUID badge - click to flip between short/full
+        document.getElementById("user-guid-badge").addEventListener("click", (e) => {
+          // Don't flip if clicking the copy button
+          if (e.target.closest('.guid-copy-btn')) return;
+
+          const badge = document.getElementById("user-guid-badge");
+          const display = document.getElementById("user-guid-display");
+          const isExpanded = badge.classList.contains("expanded");
+
+          if (isExpanded) {
+            display.textContent = badge.getAttribute("data-short-guid");
+            badge.classList.remove("expanded");
+          } else {
+            display.textContent = badge.getAttribute("data-full-guid");
+            badge.classList.add("expanded");
+          }
+        });
+
+        // GUID copy button - click to copy
+        document.getElementById("guid-copy-btn").addEventListener("click", (e) => {
+          e.stopPropagation();
+          const badge = document.getElementById("user-guid-badge");
+          const fullGuid = badge.getAttribute("data-full-guid");
+          if (fullGuid) {
+            navigator.clipboard.writeText(fullGuid).then(() => {
+              badge.classList.add("copied");
+              this.showNotification("GUID copied!", "success");
+              setTimeout(() => badge.classList.remove("copied"), 1500);
+            }).catch(() => {
+              this.showNotification("Failed to copy GUID", "error");
+            });
+          }
+        });
+
         // Clear chat button (floating)
         document
           .getElementById("clear-chat")
@@ -12394,6 +12620,16 @@
         document.getElementById("current-username").textContent =
           appState.currentUser.username;
 
+        // Display user's GUID (shortened for display, flippable)
+        const userGuid = appState.currentUser.id;
+        const shortGuid = userGuid.substring(0, 8) + "...";
+        const guidDisplay = document.getElementById("user-guid-display");
+        const guidBadge = document.getElementById("user-guid-badge");
+        guidDisplay.textContent = shortGuid;
+        guidBadge.setAttribute("data-full-guid", userGuid);
+        guidBadge.setAttribute("data-short-guid", shortGuid);
+        guidBadge.classList.remove("expanded");
+
         this.loadUserChats();
         this.applyTheme();
         this.applySettings();
@@ -12440,12 +12676,17 @@
           const chatCount = Object.keys(userChats).length;
           const initials = user.username.substring(0, 2).toUpperCase();
           
+          const shortGuid = user.id.substring(0, 8);
           userElement.innerHTML = `
             <div class="user-item-avatar">${initials}</div>
             <div class="user-item-info">
               <div class="user-item-name">${user.username}</div>
               <div class="user-item-meta">
-                <span><i class="fas fa-clock"></i> ${this.formatDate(user.lastActive)}</span>
+                <span class="user-guid-flip" data-full-guid="${user.id}" data-short-guid="${shortGuid}..." title="Click to flip">
+                  <i class="fas fa-fingerprint"></i>
+                  <span class="guid-display">${shortGuid}...</span>
+                  <i class="fas fa-copy guid-copy-icon" title="Copy GUID"></i>
+                </span>
                 <span><i class="fas fa-comments"></i> ${chatCount} chat${chatCount !== 1 ? 's' : ''}</span>
               </div>
             </div>
@@ -12457,11 +12698,41 @@
             <i class="fas fa-chevron-right user-item-arrow"></i>
           `;
 
-          // Click on user to login
+          // Click on user to login (but not on GUID flip or delete)
           userElement.addEventListener("click", (e) => {
             if (e.target.closest('.user-item-action')) return;
+            if (e.target.closest('.user-guid-flip')) return;
             document.getElementById("username").value = user.username;
             this.handleLogin();
+          });
+
+          // GUID flip functionality
+          const guidFlip = userElement.querySelector('.user-guid-flip');
+          guidFlip.addEventListener("click", (e) => {
+            e.stopPropagation();
+
+            // Check if clicking copy icon
+            if (e.target.closest('.guid-copy-icon')) {
+              const fullGuid = guidFlip.getAttribute('data-full-guid');
+              navigator.clipboard.writeText(fullGuid).then(() => {
+                guidFlip.classList.add('copied');
+                this.showNotification('GUID copied!', 'success');
+                setTimeout(() => guidFlip.classList.remove('copied'), 1500);
+              });
+              return;
+            }
+
+            // Toggle flip
+            const display = guidFlip.querySelector('.guid-display');
+            const isExpanded = guidFlip.classList.contains('expanded');
+
+            if (isExpanded) {
+              display.textContent = guidFlip.getAttribute('data-short-guid');
+              guidFlip.classList.remove('expanded');
+            } else {
+              display.textContent = guidFlip.getAttribute('data-full-guid');
+              guidFlip.classList.add('expanded');
+            }
           });
 
           // Delete user button
@@ -13606,8 +13877,6 @@
         this.userInput.style.height = "auto";
         this.clearImagePreview();
 
-        soundManager.playSendSound();
-
         // Haptic Feedback on Send - Cycle 11 Feature
         if (navigator.vibrate) {
           navigator.vibrate([50, 30, 80]);
@@ -13620,6 +13889,9 @@
         this.showLoadingIndicator();
 
         try {
+          // Use the current user's GUID for user-specific memory and context
+          const userGuid = appState.currentUser?.id || "c0p110t0-aaaa-bbbb-cccc-123456789abc";
+
           const response = await fetch(endpoint.url, {
             method: "POST",
             headers: {
@@ -13629,7 +13901,7 @@
             body: JSON.stringify({
               user_input: message || "Please analyze this image",
               conversation_history: chat.messages,
-              user_guid: endpoint.guid,
+              user_guid: userGuid,
             }),
           });
 
