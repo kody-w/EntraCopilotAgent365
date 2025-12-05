@@ -8004,9 +8004,12 @@
       constructor() {
         this.audioContext = null;
         this.enabled = false;
-        this.ambientInterval = null;
         this.ambientEnabled = true; // Can be toggled in settings
-        this.ambientStep = 0;
+        // Processing hum nodes
+        this.processingHumNodes = null;
+        this.processingHumGain = null;
+        this.processingLFO = null;
+        this.isProcessingHumming = false;
         // Focus hum for listening mode (brain.fm style)
         this.focusHumNodes = null;
         this.focusHumGain = null;
