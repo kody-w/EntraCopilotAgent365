@@ -8004,60 +8004,70 @@
       constructor() {
         this.audioContext = null;
         this.enabled = false;
-        this.ambientEnabled = true; // Can be toggled in settings
+        this.ambientEnabled = true; // Ambient focus sounds
+        this.uiSoundsEnabled = true; // UI interaction sounds
+        this.volume = 0.5; // Master volume 0-1
         // Processing hum nodes
         this.processingHumNodes = null;
         this.processingHumGain = null;
         this.processingLFO = null;
         this.isProcessingHumming = false;
-        // Focus hum for listening mode (brain.fm style)
+        // Focus hum for listening mode
         this.focusHumNodes = null;
         this.focusHumGain = null;
         this.focusLFO = null;
         this.isHumming = false;
+        // Master gain node
+        this.masterGain = null;
       }
 
       init() {
         if (!this.audioContext) {
           this.audioContext = new (window.AudioContext ||
             window.webkitAudioContext)();
+          this.masterGain = this.audioContext.createGain();
+          this.masterGain.gain.value = this.volume;
+          this.masterGain.connect(this.audioContext.destination);
         }
+      }
+
+      // Get the output node (master gain for volume control)
+      getOutput() {
+        return this.masterGain || this.audioContext.destination;
       }
 
       setEnabled(enabled) {
         this.enabled = enabled;
         if (enabled) this.init();
+        if (!enabled) {
+          this.stopAmbientSound();
+          this.stopListeningSound();
+        }
       }
 
       setAmbientEnabled(enabled) {
         this.ambientEnabled = enabled;
-        if (!enabled) this.stopAmbientSound();
+        if (!enabled) {
+          this.stopAmbientSound();
+          this.stopListeningSound();
+        }
       }
 
-      async playSound(frequency = 440, duration = 0.1, type = "sine") {
-        if (!this.enabled || !this.audioContext) return;
-
-        const oscillator = this.audioContext.createOscillator();
-        const gainNode = this.audioContext.createGain();
-
-        oscillator.connect(gainNode);
-        gainNode.connect(this.audioContext.destination);
-
-        oscillator.frequency.value = frequency;
-        oscillator.type = type;
-
-        gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(
-          0.01,
-          this.audioContext.currentTime + duration
-        );
-
-        oscillator.start(this.audioContext.currentTime);
-        oscillator.stop(this.audioContext.currentTime + duration);
+      setUiSoundsEnabled(enabled) {
+        this.uiSoundsEnabled = enabled;
       }
 
+      setVolume(volume) {
+        this.volume = Math.max(0, Math.min(1, volume));
+        if (this.masterGain) {
+          this.masterGain.gain.setValueAtTime(this.volume, this.audioContext.currentTime);
+        }
+      }
+
+      // Gentle send sound - soft rising tone
       playSendSound() {
-        this.playSound(523.25, 0.1);
+        if (!this.enabled || !this.uiSoundsEnabled) return;
+        this.init();
       }
 
       playReceiveSound() {
@@ -8160,179 +8170,6 @@
           oscillator.start(startTime);
           oscillator.stop(startTime + 0.5);
         });
-      }
-
-      // Brain.fm style focus hum - continuous concentration-enhancing drone
-      // Uses layered frequencies with binaural beats and subtle modulation
-      startListeningSound() {
-        if (!this.enabled || !this.ambientEnabled) return;
-        if (this.isHumming) return;
-
-        this.init();
-        this.isHumming = true;
-
-        const ctx = this.audioContext;
-        const now = ctx.currentTime;
-
-        // Create stereo panner for binaural effect
-        const merger = ctx.createChannelMerger(2);
-
-        // Master gain with smooth fade-in
-        this.focusHumGain = ctx.createGain();
-        this.focusHumGain.gain.setValueAtTime(0, now);
-        this.focusHumGain.gain.linearRampToValueAtTime(0.06, now + 2); // 2 second fade in
-        this.focusHumGain.connect(ctx.destination);
-
-        // LFO for subtle "breathing" amplitude modulation
-        this.focusLFO = ctx.createOscillator();
-        const lfoGain = ctx.createGain();
-        this.focusLFO.frequency.value = 0.1; // Very slow breathing ~6 breaths/min
-        this.focusLFO.type = "sine";
-        lfoGain.gain.value = 0.015; // Subtle modulation depth
-        this.focusLFO.connect(lfoGain);
-        lfoGain.connect(this.focusHumGain.gain);
-        this.focusLFO.start(now);
-
-        this.focusHumNodes = [];
-
-        // Base frequency around 90Hz (deep, grounding)
-        const baseFreq = 90;
-
-        // Binaural beat at 10Hz (alpha waves - relaxed focus)
-        const binauralOffset = 10;
-
-        // Layer 1: Deep foundation drone (left slightly lower for binaural)
-        const droneLeft = ctx.createOscillator();
-        const droneLeftGain = ctx.createGain();
-        droneLeft.frequency.value = baseFreq;
-        droneLeft.type = "sine";
-        droneLeftGain.gain.value = 0.5;
-        droneLeft.connect(droneLeftGain);
-        droneLeftGain.connect(merger, 0, 0); // Left channel
-        droneLeft.start(now);
-        this.focusHumNodes.push(droneLeft);
-
-        // Layer 1: Deep foundation drone (right slightly higher for binaural)
-        const droneRight = ctx.createOscillator();
-        const droneRightGain = ctx.createGain();
-        droneRight.frequency.value = baseFreq + binauralOffset;
-        droneRight.type = "sine";
-        droneRightGain.gain.value = 0.5;
-        droneRight.connect(droneRightGain);
-        droneRightGain.connect(merger, 0, 1); // Right channel
-        droneRight.start(now);
-        this.focusHumNodes.push(droneRight);
-
-        // Layer 2: Harmonic warmth (perfect fifth above base)
-        const harmonic1 = ctx.createOscillator();
-        const harmonic1Gain = ctx.createGain();
-        harmonic1.frequency.value = baseFreq * 1.5; // 135Hz - fifth
-        harmonic1.type = "sine";
-        harmonic1Gain.gain.value = 0.2;
-        harmonic1.connect(harmonic1Gain);
-        harmonic1Gain.connect(merger, 0, 0);
-        harmonic1Gain.connect(merger, 0, 1);
-        harmonic1.start(now);
-        this.focusHumNodes.push(harmonic1);
-
-        // Layer 3: Higher shimmer (octave + slight detune for richness)
-        const shimmerL = ctx.createOscillator();
-        const shimmerLGain = ctx.createGain();
-        shimmerL.frequency.value = baseFreq * 2 - 0.5; // Slight detune left
-        shimmerL.type = "sine";
-        shimmerLGain.gain.value = 0.1;
-        shimmerL.connect(shimmerLGain);
-        shimmerLGain.connect(merger, 0, 0);
-        shimmerL.start(now);
-        this.focusHumNodes.push(shimmerL);
-
-        const shimmerR = ctx.createOscillator();
-        const shimmerRGain = ctx.createGain();
-        shimmerR.frequency.value = baseFreq * 2 + 0.5; // Slight detune right
-        shimmerR.type = "sine";
-        shimmerRGain.gain.value = 0.1;
-        shimmerR.connect(shimmerRGain);
-        shimmerRGain.connect(merger, 0, 1);
-        shimmerR.start(now);
-        this.focusHumNodes.push(shimmerR);
-
-        // Layer 4: Sub-bass presence (half frequency)
-        const subBass = ctx.createOscillator();
-        const subBassGain = ctx.createGain();
-        subBass.frequency.value = baseFreq * 0.5; // 45Hz sub
-        subBass.type = "sine";
-        subBassGain.gain.value = 0.15;
-        subBass.connect(subBassGain);
-        subBassGain.connect(merger, 0, 0);
-        subBassGain.connect(merger, 0, 1);
-        subBass.start(now);
-        this.focusHumNodes.push(subBass);
-
-        // Layer 5: Gentle pink noise texture (very subtle)
-        const noiseBuffer = ctx.createBuffer(2, ctx.sampleRate * 2, ctx.sampleRate);
-        for (let channel = 0; channel < 2; channel++) {
-          const data = noiseBuffer.getChannelData(channel);
-          let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
-          for (let i = 0; i < noiseBuffer.length; i++) {
-            const white = Math.random() * 2 - 1;
-            // Pink noise filter
-            b0 = 0.99886 * b0 + white * 0.0555179;
-            b1 = 0.99332 * b1 + white * 0.0750759;
-            b2 = 0.96900 * b2 + white * 0.1538520;
-            b3 = 0.86650 * b3 + white * 0.3104856;
-            b4 = 0.55000 * b4 + white * 0.5329522;
-            b5 = -0.7616 * b5 - white * 0.0168980;
-            data[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
-            b6 = white * 0.115926;
-          }
-        }
-
-        const noiseSource = ctx.createBufferSource();
-        const noiseGain = ctx.createGain();
-        const noiseFilter = ctx.createBiquadFilter();
-        noiseSource.buffer = noiseBuffer;
-        noiseSource.loop = true;
-        noiseFilter.type = "lowpass";
-        noiseFilter.frequency.value = 400; // Only keep low frequencies
-        noiseGain.gain.value = 0.03; // Very subtle
-        noiseSource.connect(noiseFilter);
-        noiseFilter.connect(noiseGain);
-        noiseGain.connect(merger, 0, 0);
-        noiseGain.connect(merger, 0, 1);
-        noiseSource.start(now);
-        this.focusHumNodes.push(noiseSource);
-
-        // Connect merger to master gain
-        merger.connect(this.focusHumGain);
-      }
-
-      // Stop focus hum with smooth fade-out
-      stopListeningSound() {
-        if (!this.isHumming || !this.focusHumGain) return;
-
-        const ctx = this.audioContext;
-        const now = ctx.currentTime;
-
-        // Smooth 1 second fade out
-        this.focusHumGain.gain.cancelScheduledValues(now);
-        this.focusHumGain.gain.setValueAtTime(this.focusHumGain.gain.value, now);
-        this.focusHumGain.gain.linearRampToValueAtTime(0, now + 1);
-
-        // Stop all nodes after fade
-        setTimeout(() => {
-          if (this.focusHumNodes) {
-            this.focusHumNodes.forEach(node => {
-              try { node.stop(); } catch(e) {}
-            });
-            this.focusHumNodes = null;
-          }
-          if (this.focusLFO) {
-            try { this.focusLFO.stop(); } catch(e) {}
-            this.focusLFO = null;
-          }
-          this.focusHumGain = null;
-          this.isHumming = false;
-        }, 1100);
       }
     }
 
@@ -10090,10 +9927,6 @@
             if (this.indicator.querySelector("i")) {
               this.indicator.querySelector("i").className = "fas fa-microphone";
             }
-            // Start listening indicator sound
-            if (typeof soundManager !== 'undefined') {
-              soundManager.startListeningSound();
-            }
             break;
 
           case "processing":
@@ -10102,10 +9935,6 @@
             if (this.indicatorText) this.indicatorText.textContent = "Processing...";
             if (this.indicator.querySelector("i")) {
               this.indicator.querySelector("i").className = "fas fa-spinner fa-spin";
-            }
-            // Stop listening sound when processing
-            if (typeof soundManager !== 'undefined') {
-              soundManager.stopListeningSound();
             }
             break;
 
@@ -10116,18 +9945,10 @@
             if (this.indicator.querySelector("i")) {
               this.indicator.querySelector("i").className = "fas fa-volume-up";
             }
-            // Stop listening sound when speaking
-            if (typeof soundManager !== 'undefined') {
-              soundManager.stopListeningSound();
-            }
             break;
 
           case "disabled":
             // All classes already removed
-            // Stop listening sound when disabled
-            if (typeof soundManager !== 'undefined') {
-              soundManager.stopListeningSound();
-            }
             break;
         }
       }
@@ -13079,22 +12900,11 @@
             }, 150);
           }
         }, 2500);
-
-        // Start ambient processing sound so user knows assistant is working
-        if (typeof soundManager !== 'undefined') {
-          soundManager.startAmbientSound();
-        }
       }
 
       hideLoadingIndicator() {
         // Processing cursor - Cycle 9 Feature
         document.body.classList.remove('processing');
-
-        // Stop ambient sound and play completion chime
-        if (typeof soundManager !== 'undefined') {
-          soundManager.stopAmbientSound();
-          soundManager.playCompletionSound();
-        }
 
         // Clear phrase rotation interval
         if (this.loadingPhraseInterval) {
